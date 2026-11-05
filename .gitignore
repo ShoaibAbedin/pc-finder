@@ -16,3 +16,6 @@ coverage/
 .DS_Store
 Thumbs.db
 .vercel
+
+# private unlock link - never commit
+UNLOCK-LINK.txt

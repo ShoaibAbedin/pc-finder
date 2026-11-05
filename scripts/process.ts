@@ -20,7 +20,8 @@ if (!deps.providers.length) log("WARNING: no GEMINI_API_KEY / GROQ_API_KEY — A
 
 if (!argv.includes("--rank-only") && deps.providers.length) {
   const maxBatches = Number(arg("max-batches") ?? process.env.AI_MAX_BATCHES_PER_RUN ?? 60);
-  const r = await runSpecParsing(db, deps, { maxBatches, log });
+  const minutes = Number(arg("minutes") ?? process.env.AI_MINUTES_PER_RUN ?? 25);
+  const r = await runSpecParsing(db, deps, { maxBatches, log, timeBudgetMs: minutes * 60_000 });
   log(`spec parsing done: ${r.parsed} parsed, ${r.pending} still pending, ${r.failedBatches} failed batches${r.stoppedEarly ? " (stopped: AI limits)" : ""}`);
 }
 

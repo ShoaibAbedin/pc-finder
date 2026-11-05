@@ -19,7 +19,8 @@ export const AI_DEFAULTS = {
   groqBaseUrl: "https://api.groq.com/openai/v1",
   // Comma-separated: tried in order. Flash first, Flash-Lite when Flash is overloaded.
   geminiModel: "gemini-3.8-flash,gemini-3.5-flash-lite",
-  groqModel: "openai/gpt-oss-120b",
+  // Separate per-model rate limits on Groq, so a second model adds free capacity.
+  groqModel: "openai/gpt-oss-120b,openai/gpt-oss-20b",
   // Conservative daily request caps (below the free-tier limits) — adjust in .env if limits change.
   geminiDailyLimit: 200,
   groqDailyLimit: 800,
@@ -38,26 +39,37 @@ export function providersFromEnv(env: NodeJS.ProcessEnv = process.env): Provider
         dailyLimit: Number(env.GEMINI_DAILY_LIMIT) || AI_DEFAULTS.geminiDailyLimit,
       });
   if (env.GROQ_API_KEY)
-    out.push({
-      name: "groq",
-      baseUrl: AI_DEFAULTS.groqBaseUrl,
-      apiKey: env.GROQ_API_KEY,
-      model: env.GROQ_MODEL || AI_DEFAULTS.groqModel,
-      dailyLimit: Number(env.GROQ_DAILY_LIMIT) || AI_DEFAULTS.groqDailyLimit,
-    });
+    for (const model of (env.GROQ_MODEL || AI_DEFAULTS.groqModel).split(",").map((m) => m.trim()).filter(Boolean))
+      out.push({
+        name: "groq",
+        baseUrl: AI_DEFAULTS.groqBaseUrl,
+        apiKey: env.GROQ_API_KEY,
+        model,
+        dailyLimit: Number(env.GROQ_DAILY_LIMIT) || AI_DEFAULTS.groqDailyLimit,
+      });
   return out;
 }
 
 export class AiUnavailableError extends Error {
+  /** True when every failure was temporary (rate limit / overload / timeout) — worth waiting and retrying. */
+  public readonly temporary: boolean;
   constructor(public readonly attempts: string[]) {
     super(`All AI providers failed: ${attempts.join(" | ")}`);
     this.name = "AiUnavailableError";
+    this.temporary =
+      attempts.length > 0 && attempts.every((a) => /cooling down|HTTP 429|HTTP 503|HTTP 5\d\d|timeout|aborted|fetch failed/i.test(a));
   }
+}
+
+/** Earliest time any cooling-down model becomes available again (ms from now), or 0. */
+export function msUntilAnyModelReady(): number {
+  if (!cooldownUntil.size) return 0;
+  return Math.max(0, Math.min(...cooldownUntil.values()) - Date.now());
 }
 
 /** Models that just returned 503/429 are skipped for a while (per process) to save quota and time. */
 const cooldownUntil = new Map<string, number>();
-const COOLDOWN_MS = 5 * 60_000;
+const COOLDOWN_MS = { 429: 60_000, 503: 3 * 60_000 } as const; // per-minute limits reset quickly
 export function resetAiCooldowns() {
   cooldownUntil.clear();
 }
@@ -155,7 +167,7 @@ export async function chatJson<S extends z.ZodTypeAny>(
         res = await send();
       }
       const body = await res.text();
-      if (res.status === 503 || res.status === 429) cooldownUntil.set(coolKey, Date.now() + COOLDOWN_MS);
+      if (res.status === 503 || res.status === 429) cooldownUntil.set(coolKey, Date.now() + COOLDOWN_MS[res.status]);
       if (!res.ok) {
         attempts.push(`${p.name}: HTTP ${res.status} ${body.slice(0, 160).replace(/\s+/g, " ")}`);
         // 400/401/403/404 = our request/key problem; still try the other provider.

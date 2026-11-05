@@ -86,7 +86,7 @@ describe("chatJson provider fallback", () => {
 
   it("reads providers from env (Gemini first)", () => {
     const p = providersFromEnv({ GROQ_API_KEY: "q", GEMINI_API_KEY: "g" } as any);
-    expect(p.map((x) => `${x.name}:${x.model}`)).toEqual(["gemini:gemini-3.8-flash", "gemini:gemini-3.5-flash-lite", "groq:openai/gpt-oss-120b"]);
+    expect(p.map((x) => `${x.name}:${x.model}`)).toEqual(["gemini:gemini-3.8-flash", "gemini:gemini-3.5-flash-lite", "groq:openai/gpt-oss-120b", "groq:openai/gpt-oss-20b"]);
     expect(providersFromEnv({} as any)).toEqual([]);
   });
 });
@@ -135,5 +135,14 @@ describe("reasonIsSafe (AI can't introduce prices)", () => {
   it("rejects invented dollar figures and over-long text", () => {
     expect(reasonIsSafe("Was $1,099, now $899", facts)).toBe(false);
     expect(reasonIsSafe("x".repeat(200), facts)).toBe(false);
+  });
+});
+
+describe("AiUnavailableError.temporary", () => {
+  it("is temporary only when every failure is a rate limit / overload", () => {
+    expect(new AiUnavailableError(["gemini: HTTP 503 busy", "groq: HTTP 429 rate"]).temporary).toBe(true);
+    expect(new AiUnavailableError(["gemini:x: cooling down after overload"]).temporary).toBe(true);
+    expect(new AiUnavailableError(["gemini: daily cap 200 reached", "groq: HTTP 429"]).temporary).toBe(false);
+    expect(new AiUnavailableError(["groq: HTTP 401 bad key"]).temporary).toBe(false);
   });
 });

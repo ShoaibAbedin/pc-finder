@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { CATEGORIES } from "../../scrapers/core/types";
-import { AiUnavailableError, chatJson, type AiDeps } from "./client";
+import { AiUnavailableError, chatJson, msUntilAnyModelReady, type AiDeps } from "./client";
 
 /* ---------- schema ---------- */
 
@@ -121,7 +121,8 @@ export async function parseSpecsBatch(deps: AiDeps, batch: SpecInput[]) {
     system: SYSTEM,
     user: `Listings (index<TAB>[scraper category hint]<TAB>title):\n${user}`,
     schema: BatchResponse,
-    maxTokens: 16_000,
+    // ~200 output tokens per item; a tight cap keeps us inside per-minute token limits (Groq counts it up front).
+    maxTokens: Math.min(16_000, 1_000 + batch.length * 260),
   });
   return { specs: validateItems(res.data.items, batch), provider: res.provider, model: res.model };
 }
@@ -168,18 +169,37 @@ async function pendingInputs(db: SupabaseClient, limit: number): Promise<SpecInp
 export async function runSpecParsing(
   db: SupabaseClient,
   deps: AiDeps,
-  opts: { maxBatches: number; batchSize?: number; log?: (m: string) => void },
+  opts: {
+    maxBatches: number;
+    batchSize?: number;
+    log?: (m: string) => void;
+    /** Stop starting new batches after this long (default 25 min). */
+    timeBudgetMs?: number;
+    /** Minimum gap between batches, to respect free-tier requests-per-minute (default 5 s). */
+    minGapMs?: number;
+    sleep?: (ms: number) => Promise<void>;
+  },
 ): Promise<{ parsed: number; pending: number; failedBatches: number; stoppedEarly: boolean }> {
   const log = opts.log ?? (() => {});
-  const size = opts.batchSize ?? 40;
+  const sleep = opts.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
+  const size = opts.batchSize ?? 25;
+  const deadline = Date.now() + (opts.timeBudgetMs ?? 25 * 60_000);
+  const minGap = opts.minGapMs ?? 5_000;
   const inputs = await pendingInputs(db, opts.maxBatches * size);
   log(`spec parsing: ${inputs.length} unique titles pending (this run's cap ${opts.maxBatches * size})`);
 
   let parsed = 0;
   let failedBatches = 0;
   let stoppedEarly = false;
+  let waits = 0;
   for (let i = 0; i < inputs.length; i += size) {
+    if (Date.now() > deadline) {
+      log("  time budget used up — remaining titles will be parsed next run");
+      stoppedEarly = true;
+      break;
+    }
     const batch = inputs.slice(i, i + size);
+    if (i > 0) await sleep(minGap);
     try {
       const { specs, provider, model } = await parseSpecsBatch(deps, batch);
       const rows = batch
@@ -190,12 +210,22 @@ export async function runSpecParsing(
         if (error) throw new Error(`save specs: ${error.message}`);
       }
       parsed += rows.length;
-      log(`  batch ${i / size + 1}: ${rows.length}/${batch.length} parsed via ${provider}`);
+      waits = 0;
+      log(`  batch ${i / size + 1}: ${rows.length}/${batch.length} parsed via ${provider}/${model}`);
     } catch (err) {
+      if (err instanceof AiUnavailableError && err.temporary && waits < 6 && Date.now() < deadline) {
+        // Per-minute limits / overload: wait for a model to free up, then retry the same batch.
+        const wait = Math.max(30_000, Math.min(msUntilAnyModelReady(), 120_000));
+        waits++;
+        log(`  batch ${i / size + 1}: all models busy/rate-limited — waiting ${Math.round(wait / 1000)}s (${waits}/6)`);
+        await sleep(wait);
+        i -= size; // retry this batch
+        continue;
+      }
       failedBatches++;
       log(`  batch ${i / size + 1} failed: ${(err as Error).message.slice(0, 300)}`);
       if (err instanceof AiUnavailableError) {
-        stoppedEarly = true; // all providers exhausted — try again next run
+        stoppedEarly = true; // daily caps or persistent failures — try again next run
         break;
       }
     }

@@ -146,3 +146,30 @@ describe("AiUnavailableError.temporary", () => {
     expect(new AiUnavailableError(["groq: HTTP 401 bad key"]).temporary).toBe(false);
   });
 });
+
+describe("truncated output salvage", () => {
+  it("keeps complete items from a cut-off response", () => {
+    const cut = '{"items":[{"i":0,"model":"RTX 5070"},{"i":1,"model":"B650 {x}"},{"i":2,"mod';
+    expect(extractJson(cut)).toEqual({ items: [{ i: 0, model: "RTX 5070" }, { i: 1, model: "B650 {x}" }] });
+  });
+  it("returns nothing useful when no item completed", () => {
+    expect(() => extractJson('{"items":[{"i":0,"mo')).toThrow();
+  });
+});
+
+describe("daily quota vs per-minute limit", () => {
+  it("backs off a model for an hour on a daily quota 429, but retries others", async () => {
+    const calls: string[] = [];
+    const deps = {
+      providers,
+      fetchImpl: async (u: string) => (
+        calls.push(u),
+        u.includes("gemini") ? new Response("You exceeded your current quota, check your plan", { status: 429 }) : ok('{"answer":5}')
+      ),
+    };
+    expect((await chatJson(deps, { system: "s", user: "u", schema: Schema })).provider).toBe("groq");
+    calls.length = 0;
+    await chatJson(deps, { system: "s", user: "u", schema: Schema });
+    expect(calls.some((c) => c.includes("gemini"))).toBe(false);
+  });
+});

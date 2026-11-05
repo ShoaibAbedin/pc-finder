@@ -91,7 +91,7 @@ export interface ChatJsonResult<T> {
   model: string;
 }
 
-/** Strips ```json fences and finds the outermost JSON object. */
+/** Strips ```json fences and finds the outermost JSON object; salvages truncated `{"x":[...` arrays. */
 export function extractJson(text: string): unknown {
   const t = text.trim().replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/, "");
   try {
@@ -99,8 +99,52 @@ export function extractJson(text: string): unknown {
   } catch {
     const start = t.indexOf("{");
     const end = t.lastIndexOf("}");
-    if (start >= 0 && end > start) return JSON.parse(t.slice(start, end + 1));
+    if (start >= 0 && end > start) {
+      try {
+        return JSON.parse(t.slice(start, end + 1));
+      } catch {
+        /* fall through to salvage */
+      }
+    }
+    const salvaged = salvageTruncatedArray(t.slice(Math.max(0, start)));
+    if (salvaged !== undefined) return salvaged;
     throw new Error("No JSON object in response");
+  }
+}
+
+/**
+ * For output cut off mid-way like `{"items":[{...},{...},{"i":7,"ca` — keeps every complete element
+ * of the first array and closes the JSON. Returns undefined if nothing can be recovered.
+ */
+export function salvageTruncatedArray(t: string): unknown {
+  let depth = 0;
+  let inStr = false;
+  let esc = false;
+  let arrayDepth = -1;
+  let lastCompleteEnd = -1;
+  for (let i = 0; i < t.length; i++) {
+    const ch = t[i]!;
+    if (inStr) {
+      if (esc) esc = false;
+      else if (ch === "\\") esc = true;
+      else if (ch === '"') inStr = false;
+      continue;
+    }
+    if (ch === '"') inStr = true;
+    else if (ch === "{" || ch === "[") {
+      depth++;
+      if (ch === "[" && arrayDepth < 0) arrayDepth = depth;
+    } else if (ch === "}" || ch === "]") {
+      depth--;
+      if (ch === "}" && arrayDepth > 0 && depth === arrayDepth) lastCompleteEnd = i; // closed an element of the array
+    }
+  }
+  if (arrayDepth < 0 || lastCompleteEnd < 0) return undefined;
+  // close the array, then every object that enclosed it
+  try {
+    return JSON.parse(t.slice(0, lastCompleteEnd + 1) + "]" + "}".repeat(arrayDepth - 1));
+  } catch {
+    return undefined;
   }
 }
 
@@ -154,6 +198,8 @@ export async function chatJson<S extends z.ZodTypeAny>(
             { role: "user", content: req.user },
           ],
           response_format: { type: "json_object" },
+          // Limits hidden "thinking" tokens, which otherwise eat the output budget and per-minute limits.
+          reasoning_effort: "low",
           temperature: req.temperature ?? 0.1,
           max_tokens: req.maxTokens ?? 8000,
         }),
@@ -167,7 +213,11 @@ export async function chatJson<S extends z.ZodTypeAny>(
         res = await send();
       }
       const body = await res.text();
-      if (res.status === 503 || res.status === 429) cooldownUntil.set(coolKey, Date.now() + COOLDOWN_MS[res.status]);
+      if (res.status === 503 || res.status === 429) {
+        // A 429 mentioning "quota" is a daily/free-tier quota, not a per-minute limit — back off much longer.
+        const daily = res.status === 429 && /quota/i.test(body) && !/per minute|tokens per|requests per/i.test(body);
+        cooldownUntil.set(coolKey, Date.now() + (daily ? 60 * 60_000 : COOLDOWN_MS[res.status]));
+      }
       if (!res.ok) {
         attempts.push(`${p.name}: HTTP ${res.status} ${body.slice(0, 160).replace(/\s+/g, " ")}`);
         // 400/401/403/404 = our request/key problem; still try the other provider.

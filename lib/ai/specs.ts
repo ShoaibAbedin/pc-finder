@@ -81,7 +81,7 @@ const BatchResponse = z.object({ items: z.array(z.unknown()) });
 
 const SYSTEM = `You extract structured specifications from Australian PC retail listing titles.
 Return ONLY a JSON object: {"items":[...]} with one entry per input line, each with "i" equal to the input index.
-Fields (use null when unknown or not applicable; never invent values not implied by the title):
+Fields — OMIT any field that is unknown or not applicable (never output nulls), and never invent values not implied by the title:
 category (one of ${CATEGORIES.join(", ")}), relevant (false if not a desktop PC component/prebuilt desktop/monitor/keyboard/mouse/headset/Windows licence — e.g. laptop RAM, laptops, cables, mounts, gift cards, warranties, accessories),
 kind, brand, model (normalised, e.g. "RTX 5070 Ti", "Ryzen 7 9800X3D", "B850"),
 tier (integer 1-10 = performance tier WITHIN its category for current-gen gaming/workloads; 10 = flagship, e.g. RTX 5090=10, RTX 5070=6, RTX 5060=4; Ryzen 7 9800X3D=9; 32GB DDR5-6000=7; 1TB Gen4 NVMe=6; 850W Gold=7),
@@ -122,8 +122,8 @@ export async function parseSpecsBatch(deps: AiDeps, batch: SpecInput[]) {
     user: `Listings (index<TAB>[scraper category hint]<TAB>title):\n${user}`,
     schema: BatchResponse,
     // ~200 output tokens per item. Groq's free tier counts prompt + max_tokens against an ~8k tokens/minute
-    // allowance up front, so keep the whole request well under that (18 items ≈ 1.6k prompt + 4.9k output).
-    maxTokens: Math.min(16_000, 900 + batch.length * 220),
+    // allowance up front, so keep the whole request well under that (25 items ≈ 1.5k prompt + 5k output incl. reasoning).
+    maxTokens: Math.min(16_000, 700 + batch.length * 170),
   });
   return { specs: validateItems(res.data.items, batch), provider: res.provider, model: res.model };
 }
@@ -183,7 +183,7 @@ export async function runSpecParsing(
 ): Promise<{ parsed: number; pending: number; failedBatches: number; stoppedEarly: boolean }> {
   const log = opts.log ?? (() => {});
   const sleep = opts.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
-  const size = opts.batchSize ?? 18;
+  const size = opts.batchSize ?? 25;
   const deadline = Date.now() + (opts.timeBudgetMs ?? 25 * 60_000);
   const minGap = opts.minGapMs ?? 5_000;
   const inputs = await pendingInputs(db, opts.maxBatches * size);

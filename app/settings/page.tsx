@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { SettingsForm } from "@/components/SettingsForm";
+import { UpdateLog } from "@/components/UpdateLog";
 import { createServiceClient } from "@/lib/db/client";
 import { loadTargets } from "@/lib/ai/targets";
 import { DEFAULT_SETTINGS } from "@/lib/settings/schema";
@@ -27,6 +28,10 @@ export default async function SettingsPage() {
       <div className="mt-12">
         <SettingsForm initial={settings ?? DEFAULT_SETTINGS} save={saveSettingsAction} />
       </div>
+      <section className="mt-16">
+        <h2 className="display mb-4 text-3xl">Update log</h2>
+        <UpdateLog />
+      </section>
     </div>
   );
 }

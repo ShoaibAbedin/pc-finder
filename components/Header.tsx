@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { getLastUpdated } from "@/lib/deals/queries";
 import { melbourneTime, timeAgo } from "@/lib/format";
+import { isStale } from "@/lib/schedule";
 import { CategoryNav } from "./CategoryNav";
+import { RefreshButton } from "./RefreshButton";
 
 const BLACK_FRIDAY = new Date("2026-11-27T00:00:00+11:00");
 
@@ -15,6 +17,7 @@ function blackFridayText(now = Date.now()) {
 
 export async function Header() {
   const lastUpdated = await getLastUpdated().catch(() => null);
+  const stale = isStale(lastUpdated);
 
   return (
     <header className="sticky top-0 z-30">
@@ -30,18 +33,12 @@ export async function Header() {
           </Link>
           <div className="flex min-w-0 items-center gap-2 sm:gap-3">
             <span
-              className="hidden truncate text-xs text-muted sm:inline"
+              className={`hidden truncate text-xs sm:inline ${stale ? "font-medium text-amber-700" : "text-muted"}`}
               title={lastUpdated ? melbourneTime(lastUpdated) : undefined}
             >
-              Updated {timeAgo(lastUpdated)}
+              {stale && "⚠ "}Updated {timeAgo(lastUpdated)}
             </span>
-            <button type="button" disabled title="Refresh will be enabled in Phase 4" className="btn btn-outline btn-sm">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
-                <path d="M21 12a9 9 0 1 1-2.64-6.36L21 8" />
-                <path d="M21 3v5h-5" />
-              </svg>
-              Refresh
-            </button>
+            <RefreshButton />
             <Link href="/settings" className="btn btn-primary btn-sm">
               Settings
             </Link>

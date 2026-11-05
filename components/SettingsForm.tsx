@@ -7,15 +7,16 @@ import { CATEGORY_TABS } from "@/lib/categories";
 import { BUILD_CATEGORIES } from "@/lib/settings/constants";
 import type { Settings } from "@/lib/settings/schema";
 
-const input = "w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-fg";
-const label = "mb-1.5 block text-sm font-medium";
+const input = "field";
+const label = "eyebrow mb-2 block";
 const catLabel = (slug: string) => CATEGORY_TABS.find((c) => c.slug === slug)?.label ?? slug;
 
 function Check({ checked, onChange, children }: { checked: boolean; onChange: (v: boolean) => void; children: React.ReactNode }) {
   return (
-    <label className="flex cursor-pointer items-center gap-2.5 rounded-lg border border-border px-3 py-2.5 text-sm has-[:checked]:border-fg">
-      <input type="checkbox" className="size-4" checked={checked} onChange={(e) => onChange(e.target.checked)} />
+    <label className="flex cursor-pointer items-center justify-between gap-2.5 rounded-full border border-border bg-surface px-5 py-3 text-sm font-medium transition-colors hover:border-fg has-[:checked]:border-fg has-[:checked]:bg-fg has-[:checked]:text-bg">
+      <input type="checkbox" className="sr-only" checked={checked} onChange={(e) => onChange(e.target.checked)} />
       {children}
+      <span aria-hidden className="text-xs">{checked ? "✓" : "+"}</span>
     </label>
   );
 }
@@ -36,10 +37,10 @@ function Choice<T extends string>({
           type="button"
           key={o.v}
           onClick={() => onChange(o.v)}
-          className={`rounded-lg border px-3 py-2.5 text-left text-sm ${value === o.v ? "border-fg bg-muted-bg" : "border-border"}`}
+          className={`rounded-2xl border px-4 py-3 text-left text-sm transition-colors ${value === o.v ? "border-fg bg-fg text-bg" : "border-border bg-surface hover:border-fg"}`}
         >
           <div className="font-medium">{o.label}</div>
-          {o.hint && <div className="text-xs text-muted">{o.hint}</div>}
+          {o.hint && <div className={`text-xs ${value === o.v ? "text-bg/70" : "text-muted"}`}>{o.hint}</div>}
         </button>
       ))}
     </div>
@@ -95,15 +96,15 @@ export function SettingsForm({
               ]}
             />
           </div>
-          <details className="rounded-lg border border-border">
-            <summary className="cursor-pointer list-none px-3 py-2.5 text-sm font-medium">
+          <details className="rounded-2xl bg-surface">
+            <summary className="cursor-pointer list-none px-5 py-4 text-sm font-medium">
               Optional: limits per category ▾
             </summary>
-            <div className="grid grid-cols-2 gap-3 border-t border-border p-3 sm:grid-cols-3">
+            <div className="grid grid-cols-2 gap-3 border-t border-border p-5 sm:grid-cols-3">
               {(["gpu", "cpu", "motherboard", "ram", "storage", "psu", "case", "cooling", "prebuilt", "monitor", "peripheral", "software"] as const).map(
                 (c) => (
                   <div key={c}>
-                    <label className="mb-1 block text-xs text-muted" htmlFor={`lim-${c}`}>
+                    <label className="eyebrow mb-1.5 block" htmlFor={`lim-${c}`}>
                       {catLabel(c)}
                     </label>
                     <input
@@ -307,7 +308,7 @@ export function SettingsForm({
   const saveBar = (
     <div className="flex flex-col gap-2">
       {result && (
-        <p className={`text-sm ${result.ok ? "text-good" : "text-red-600"}`} role="status">
+        <p className={`text-sm font-medium ${result.ok ? "text-good" : "text-red-700"}`} role="status">
           {result.ok ? result.message : result.error}
         </p>
       )}
@@ -325,15 +326,15 @@ export function SettingsForm({
             Step {step + 1} of {steps.length}
           </p>
           <div className="mt-2 h-1 rounded-full bg-muted-bg">
-            <div className="h-1 rounded-full bg-fg transition-all" style={{ width: `${((step + 1) / steps.length) * 100}%` }} />
+            <div className="h-1 rounded-full bg-fg transition-all duration-300" style={{ width: `${((step + 1) / steps.length) * 100}%` }} />
           </div>
-          <h2 className="mt-4 text-lg font-semibold">{cur.title}</h2>
+          <h2 className="display mt-6 text-4xl">{cur.title}</h2>
         </div>
         {cur.render()}
         {saveBar}
         <div className="flex gap-2">
           {step > 0 && (
-            <button type="button" onClick={() => setStep(step - 1)} className="rounded-lg border border-border px-4 py-2 text-sm">
+            <button type="button" onClick={() => setStep(step - 1)} className="btn btn-outline">
               Back
             </button>
           )}
@@ -341,7 +342,7 @@ export function SettingsForm({
             type="button"
             disabled={pending || (step === 0 && s.budget.total < 200)}
             onClick={() => (last ? submit() : setStep(step + 1))}
-            className="ml-auto rounded-lg bg-fg px-5 py-2 text-sm font-medium text-bg disabled:opacity-40"
+            className="btn btn-primary ml-auto"
           >
             {last ? (pending ? "Saving…" : "Finish") : "Next"}
           </button>
@@ -354,7 +355,7 @@ export function SettingsForm({
     <div className="flex flex-col gap-10">
       {steps.map((st) => (
         <section key={st.title}>
-          <h2 className="mb-3 text-base font-semibold">{st.title}</h2>
+          <h2 className="display mb-4 text-3xl">{st.title}</h2>
           {st.render()}
         </section>
       ))}
@@ -364,7 +365,7 @@ export function SettingsForm({
           type="button"
           onClick={submit}
           disabled={pending || s.budget.total < 200}
-          className="rounded-lg bg-fg px-5 py-2.5 text-sm font-medium text-bg disabled:opacity-40 sm:self-end"
+          className="btn btn-primary sm:self-end"
         >
           {pending ? "Saving…" : "Save settings"}
         </button>

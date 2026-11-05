@@ -13,8 +13,8 @@ export default async function OnboardingPage() {
   const settings = await loadSettings(createServiceClient());
   return (
     <div className="mx-auto max-w-xl">
-      <h1 className="text-2xl font-semibold tracking-tight">Let&apos;s find your deals</h1>
-      <p className="mt-1 text-sm text-muted">A few quick questions. You can change everything later in Settings.</p>
+      <h1 className="display text-6xl sm:text-7xl">Let&apos;s find your deals</h1>
+      <p className="mt-3 text-sm text-muted">A few quick questions. You can change everything later in Settings.</p>
       <div className="mt-8">
         <SettingsForm initial={settings ?? DEFAULT_SETTINGS} wizard save={saveSettingsAction} />
       </div>

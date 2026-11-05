@@ -4,29 +4,32 @@ import { Badge } from "./Badge";
 
 export function OzDealList({ deals }: { deals: OzDealListing[] }) {
   return (
-    <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-surface">
+    <ul className="flex flex-col gap-2">
       {deals.map((d) => (
         <li key={d.node_id}>
           <a
             href={d.link}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-start gap-3 p-3 hover:bg-muted-bg"
+            className="group flex items-center gap-4 rounded-2xl bg-surface p-3 pr-4 transition-colors hover:bg-white/60 sm:p-4"
           >
-            <div className="flex w-12 shrink-0 flex-col items-center rounded-lg bg-muted-bg py-1 text-xs">
-              <span className="font-semibold text-good">+{d.votes_pos}</span>
-              <span className="text-[10px] text-muted">votes</span>
+            <div className="flex size-12 shrink-0 flex-col items-center justify-center rounded-xl bg-tile">
+              <span className="text-sm font-semibold tabular-nums text-good">+{d.votes_pos}</span>
+              <span className="text-[9px] uppercase tracking-wider text-muted">votes</span>
             </div>
             <div className="min-w-0 flex-1">
-              <p className="line-clamp-2 text-sm leading-snug">{d.title}</p>
+              <p className="line-clamp-2 text-sm font-medium leading-snug">{d.title}</p>
               <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted">
                 {d.is_new && <Badge kind="new">New</Badge>}
                 <span>{d.retailer_name ?? d.store ?? "OzBargain"}</span>
                 <span>· {timeAgo(d.posted_at)}</span>
-                <span>· {d.comment_count} comments</span>
+                <span className="hidden sm:inline">· {d.comment_count} comments</span>
               </p>
             </div>
-            <div className="shrink-0 text-right text-sm font-semibold">{formatPrice(d.price_cents)}</div>
+            <div className="flex shrink-0 flex-col items-end gap-2">
+              <span className="font-semibold tabular-nums">{formatPrice(d.price_cents)}</span>
+              <span className="btn btn-outline btn-sm hidden group-hover:border-fg sm:inline-flex">View deal</span>
+            </div>
           </a>
         </li>
       ))}

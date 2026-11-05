@@ -2,27 +2,28 @@ import Link from "next/link";
 import { SORTS, activeFilterCount, type DealFilters } from "@/lib/deals/filters";
 import type { RetailerOption } from "@/lib/deals/queries";
 
+const pill =
+  "flex cursor-pointer items-center gap-2 rounded-full border border-border bg-surface px-4 py-2 text-sm transition-colors hover:border-fg has-[:checked]:border-fg has-[:checked]:bg-fg has-[:checked]:text-bg";
+
 /**
  * Plain GET form: works without JavaScript, and filters end up in the URL (bookmarkable).
  * Rendered as a sidebar on desktop and a collapsible panel on mobile.
  */
 function FilterForm({ f, retailers, basePath, idPrefix }: Props & { idPrefix: string }) {
-  const input =
-    "w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm outline-none focus:border-fg";
   return (
-    <form action={basePath} method="get" className="flex flex-col gap-5 text-sm">
+    <form action={basePath} method="get" className="flex flex-col gap-6 text-sm">
       <div>
-        <label htmlFor={`${idPrefix}-q`} className="mb-1.5 block font-medium">
+        <label htmlFor={`${idPrefix}-q`} className="eyebrow mb-2 block">
           Search
         </label>
-        <input id={`${idPrefix}-q`} name="q" defaultValue={f.q} placeholder="e.g. 9070 XT" className={input} />
+        <input id={`${idPrefix}-q`} name="q" defaultValue={f.q} placeholder="e.g. 9070 XT" className="field" />
       </div>
 
       <div>
-        <label htmlFor={`${idPrefix}-sort`} className="mb-1.5 block font-medium">
-          Sort
+        <label htmlFor={`${idPrefix}-sort`} className="eyebrow mb-2 block">
+          Sort by
         </label>
-        <select id={`${idPrefix}-sort`} name="sort" defaultValue={f.sort} className={input}>
+        <select id={`${idPrefix}-sort`} name="sort" defaultValue={f.sort} className="field appearance-none">
           {Object.entries(SORTS).map(([k, label]) => (
             <option key={k} value={k}>
               {label}
@@ -32,47 +33,48 @@ function FilterForm({ f, retailers, basePath, idPrefix }: Props & { idPrefix: st
       </div>
 
       <fieldset>
-        <legend className="mb-1.5 font-medium">Price (AUD)</legend>
+        <legend className="eyebrow mb-2">Price (AUD)</legend>
         <div className="flex items-center gap-2">
-          <input name="min" inputMode="numeric" placeholder="Min" defaultValue={f.minDollars ?? ""} className={input} aria-label="Minimum price" />
+          <input name="min" inputMode="numeric" placeholder="Min" defaultValue={f.minDollars ?? ""} className="field" aria-label="Minimum price" />
           <span className="text-muted">–</span>
-          <input name="max" inputMode="numeric" placeholder="Max" defaultValue={f.maxDollars ?? ""} className={input} aria-label="Maximum price" />
+          <input name="max" inputMode="numeric" placeholder="Max" defaultValue={f.maxDollars ?? ""} className="field" aria-label="Maximum price" />
         </div>
       </fieldset>
 
       {retailers.length > 0 && (
         <fieldset>
-          <legend className="mb-1.5 font-medium">Retailer</legend>
-          <div className="flex flex-col gap-1.5">
+          <legend className="eyebrow mb-2">Retailer</legend>
+          <div className="flex flex-wrap gap-2">
             {retailers.map((r) => (
-              <label key={r.id} className="flex items-center gap-2">
-                <input type="checkbox" name="r" value={r.id} defaultChecked={f.retailers.includes(r.id)} className="size-4 accent-current" />
-                <span>{r.name}</span>
-                <span className="ml-auto text-xs text-muted">{r.listing_count.toLocaleString("en-AU")}</span>
+              <label key={r.id} className={pill}>
+                <input type="checkbox" name="r" value={r.id} defaultChecked={f.retailers.includes(r.id)} className="sr-only" />
+                {r.name}
               </label>
             ))}
           </div>
         </fieldset>
       )}
 
-      <fieldset className="flex flex-col gap-1.5">
-        <legend className="mb-1.5 font-medium">Availability</legend>
-        <label className="flex items-center gap-2">
-          <input type="checkbox" name="pickup" value="1" defaultChecked={f.pickupOnly} className="size-4" />
-          Melbourne click &amp; collect
-        </label>
-        <label className="flex items-center gap-2">
-          {/* checked sends stock=all; unchecked sends nothing → default (in stock only) */}
-          <input type="checkbox" name="stock" value="all" defaultChecked={!f.inStockOnly} className="size-4" />
-          Include out of stock
-        </label>
+      <fieldset>
+        <legend className="eyebrow mb-2">Availability</legend>
+        <div className="flex flex-wrap gap-2">
+          <label className={pill}>
+            <input type="checkbox" name="pickup" value="1" defaultChecked={f.pickupOnly} className="sr-only" />
+            Melbourne pickup
+          </label>
+          <label className={pill}>
+            {/* checked sends stock=all; unchecked sends nothing → default (in stock only) */}
+            <input type="checkbox" name="stock" value="all" defaultChecked={!f.inStockOnly} className="sr-only" />
+            Include sold out
+          </label>
+        </div>
       </fieldset>
 
-      <div className="flex gap-2">
-        <button type="submit" className="flex-1 rounded-lg bg-fg px-4 py-2 font-medium text-bg">
-          Apply
+      <div className="flex gap-2 pt-1">
+        <button type="submit" className="btn btn-primary flex-1">
+          Apply filters
         </button>
-        <Link href={basePath} className="rounded-lg border border-border px-4 py-2 text-muted hover:text-fg">
+        <Link href={basePath} className="btn btn-outline">
           Reset
         </Link>
       </div>
@@ -90,17 +92,19 @@ export function Filters(props: Props) {
   const n = activeFilterCount(props.f);
   return (
     <>
-      <details className="mb-4 rounded-xl border border-border md:hidden">
-        <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 text-sm font-medium">
-          <span>Filters &amp; sort{n ? ` · ${n} active` : ""}</span>
-          <span aria-hidden className="text-muted">▾</span>
+      <details className="group mb-6 md:hidden">
+        <summary className="btn btn-outline w-full cursor-pointer list-none justify-between">
+          <span>Filter &amp; sort{n ? ` (${n})` : ""}</span>
+          <span aria-hidden className="transition-transform group-open:rotate-180">
+            ▾
+          </span>
         </summary>
-        <div className="border-t border-border p-4">
+        <div className="mt-3 rounded-2xl bg-surface p-5">
           <FilterForm {...props} idPrefix="m" />
         </div>
       </details>
-      <aside className="hidden w-60 shrink-0 md:block">
-        <div className="sticky top-32">
+      <aside className="hidden w-64 shrink-0 md:block">
+        <div className="sticky top-44">
           <FilterForm {...props} idPrefix="d" />
         </div>
       </aside>

@@ -1,34 +1,24 @@
 @import "tailwindcss";
 
-/* Design tokens: neutral greys + one accent + one "good deal" green. Dark mode follows the OS. */
+/* Design tokens — warm off-white, near-black, one green for savings. Light theme by design. */
 :root {
-  --bg: #ffffff;
+  --bg: #f6f5f1;
   --surface: #ffffff;
-  --muted-bg: #f5f5f4;
-  --fg: #18181b;
-  --muted: #71717a;
-  --border: #e7e5e4;
-  --accent: #2563eb;
-  --good: #047857;
-  --good-bg: #ecfdf5;
-}
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0c0c0d;
-    --surface: #151517;
-    --muted-bg: #1e1e21;
-    --fg: #f4f4f5;
-    --muted: #a1a1aa;
-    --border: #2a2a2e;
-    --accent: #60a5fa;
-    --good: #34d399;
-    --good-bg: #052e22;
-  }
+  --tile: #ebeae5;
+  --muted-bg: #efeee9;
+  --fg: #111111;
+  --muted: #6e6d68;
+  --border: #dddbd4;
+  --accent: #111111;
+  --good: #0a7a45;
+  --good-bg: #e2f0e6;
+  color-scheme: light;
 }
 
 @theme inline {
   --color-bg: var(--bg);
   --color-surface: var(--surface);
+  --color-tile: var(--tile);
   --color-muted-bg: var(--muted-bg);
   --color-fg: var(--fg);
   --color-muted: var(--muted);
@@ -37,6 +27,34 @@
   --color-good: var(--good);
   --color-good-bg: var(--good-bg);
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-barlow), "Arial Narrow", ui-sans-serif, sans-serif;
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 text-sm font-medium whitespace-nowrap transition-[background-color,border-color,opacity,color] duration-150 select-none disabled:cursor-not-allowed disabled:opacity-40;
+  }
+  .btn-sm {
+    @apply px-4 py-2 text-xs;
+  }
+  .btn-primary {
+    @apply bg-fg text-bg hover:bg-neutral-700;
+  }
+  .btn-outline {
+    @apply border border-border bg-transparent text-fg hover:border-fg;
+  }
+  .btn-light {
+    @apply bg-surface text-fg hover:bg-muted-bg;
+  }
+  .display {
+    @apply font-display font-bold uppercase leading-[0.92] tracking-[-0.01em];
+  }
+  .field {
+    @apply w-full rounded-xl border border-border bg-surface px-4 py-2.5 text-sm outline-none transition-colors placeholder:text-neutral-400 focus:border-fg;
+  }
+  .eyebrow {
+    @apply text-[11px] font-medium uppercase tracking-[0.12em] text-muted;
+  }
 }
 
 html {
@@ -48,7 +66,7 @@ body {
   background: var(--bg);
 }
 
-/* Hide scrollbar on the horizontal category tabs but keep them scrollable */
+/* Horizontal scrollers without visible scrollbars */
 .no-scrollbar {
   scrollbar-width: none;
 }
@@ -58,4 +76,8 @@ body {
 
 summary::-webkit-details-marker {
   display: none;
+}
+
+input[type="checkbox"] {
+  accent-color: var(--fg);
 }

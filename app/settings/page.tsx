@@ -16,15 +16,15 @@ export default async function SettingsPage() {
 
   return (
     <div className="max-w-2xl">
-      <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
-      <p className="mt-1 text-sm text-muted">Changes re-rank your deals as soon as you save.</p>
+      <h1 className="display text-6xl sm:text-7xl">Settings</h1>
+      <p className="mt-3 text-sm text-muted">Changes re-rank your deals as soon as you save.</p>
       {targets && (
-        <div className="mt-6 rounded-xl border border-border p-4 text-sm">
-          <p className="font-medium">Your target build</p>
+        <div className="mt-8 rounded-2xl bg-surface p-5 text-sm">
+          <p className="eyebrow">Your target build</p>
           <p className="mt-1 text-muted">{targets.data.summary}</p>
         </div>
       )}
-      <div className="mt-8">
+      <div className="mt-12">
         <SettingsForm initial={settings ?? DEFAULT_SETTINGS} save={saveSettingsAction} />
       </div>
     </div>

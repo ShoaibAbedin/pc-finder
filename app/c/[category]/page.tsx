@@ -36,18 +36,18 @@ export default async function CategoryPage({ params, searchParams }: Props) {
 
   return (
     <>
-      <div className="mb-6 flex items-baseline justify-between gap-4">
-        <h1 className="text-2xl font-semibold tracking-tight">{label}</h1>
-        <p className="text-sm text-muted">{total.toLocaleString("en-AU")} listings</p>
+      <div className="mb-8 flex flex-wrap items-end justify-between gap-4 sm:mb-12">
+        <h1 className="display text-5xl sm:text-7xl">{label}</h1>
+        <p className="text-sm tabular-nums text-muted">{total.toLocaleString("en-AU")} results</p>
       </div>
 
-      <div className="md:flex md:gap-8">
+      <div className="md:flex md:gap-10">
         <Filters f={f} retailers={retailers} basePath={basePath} />
 
         <div className="min-w-0 flex-1">
           {oz.length > 0 && (
-            <div className="mb-6">
-              <h2 className="mb-2 text-sm font-medium text-muted">On OzBargain</h2>
+            <div className="mb-10">
+              <h2 className="eyebrow mb-3">Trending on OzBargain</h2>
               <OzDealList deals={oz} />
             </div>
           )}

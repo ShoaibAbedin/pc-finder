@@ -16,29 +16,43 @@ export default async function Home() {
 
   return (
     <>
-      <div className="mb-6 flex items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">For You</h1>
-          <p className="mt-1 text-sm text-muted">
-            Ranked for your build{rankedAt ? ` · ${timeAgo(rankedAt)}` : ""}. ▲▼ = change since last update.
-          </p>
+      <section className="mb-12 sm:mb-16">
+        <p className="eyebrow">Ranked for your build{rankedAt ? ` · ${timeAgo(rankedAt)}` : ""}</p>
+        <h1 className="display mt-3 text-6xl sm:text-8xl">For you</h1>
+        <p className="mt-4 max-w-xl text-sm text-muted sm:text-base">
+          The best current deals for your budget and build — scored on fit, real discounts, stock and Melbourne pickup.
+        </p>
+        <div className="mt-6 flex flex-wrap gap-3">
+          <Link href="/settings" className="btn btn-primary">
+            Edit preferences
+          </Link>
+          <Link href="/c/all" className="btn btn-outline">
+            Browse all deals
+          </Link>
         </div>
-        <Link href="/settings" className="shrink-0 text-sm text-accent hover:underline">
-          Edit preferences
-        </Link>
-      </div>
+      </section>
 
-      <div className="mb-10">
+      <section className="mb-16">
+        <div className="mb-5 flex items-end justify-between gap-4">
+          <h2 className="display text-3xl sm:text-4xl">Top {items.length || ""} picks</h2>
+          <span className="hidden text-xs text-muted sm:inline">▲▼ change since last update</span>
+        </div>
         {items.length ? (
           <ForYouList items={items} />
         ) : (
-          <EmptyState>
+          <EmptyState
+            action={
+              <Link href="/settings" className="btn btn-primary btn-sm">
+                Open settings
+              </Link>
+            }
+          >
             No ranking yet. It&apos;s created when you save your settings and after each update.
           </EmptyState>
         )}
-      </div>
+      </section>
 
-      <Section title="Biggest price drops" subtitle="Compared with the previous price we recorded" href="/c/all?sort=drop">
+      <Section title="Price drops" subtitle="Compared with the previous price we recorded" href="/c/all?sort=drop">
         {drops.length ? (
           <DealGrid items={drops} />
         ) : (

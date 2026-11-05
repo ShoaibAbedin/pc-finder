@@ -4,23 +4,25 @@ export function Section({
   title,
   subtitle,
   href,
+  hrefLabel = "Shop all",
   children,
 }: {
   title: string;
   subtitle?: string;
   href?: string;
+  hrefLabel?: string;
   children: React.ReactNode;
 }) {
   return (
-    <section className="mb-10">
-      <div className="mb-3 flex items-end justify-between gap-4">
+    <section className="mb-16">
+      <div className="mb-5 flex items-end justify-between gap-4">
         <div>
-          <h2 className="text-base font-semibold tracking-tight">{title}</h2>
-          {subtitle && <p className="text-sm text-muted">{subtitle}</p>}
+          <h2 className="display text-3xl sm:text-4xl">{title}</h2>
+          {subtitle && <p className="mt-1 text-sm text-muted">{subtitle}</p>}
         </div>
         {href && (
-          <Link href={href} className="shrink-0 text-sm text-accent hover:underline">
-            See all
+          <Link href={href} className="btn btn-outline btn-sm shrink-0">
+            {hrefLabel}
           </Link>
         )}
       </div>
@@ -29,10 +31,11 @@ export function Section({
   );
 }
 
-export function EmptyState({ children }: { children: React.ReactNode }) {
+export function EmptyState({ children, action }: { children: React.ReactNode; action?: React.ReactNode }) {
   return (
-    <div className="rounded-xl border border-dashed border-border px-4 py-8 text-center text-sm text-muted">
-      {children}
+    <div className="flex flex-col items-center gap-4 rounded-2xl bg-surface px-6 py-12 text-center text-sm text-muted">
+      <p className="max-w-md">{children}</p>
+      {action}
     </div>
   );
 }

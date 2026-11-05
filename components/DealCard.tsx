@@ -44,6 +44,11 @@ export function DealCard({ d }: { d: DealListing }) {
             ) : null}
           </div>
           <div className="text-right text-xs text-muted">
+            {d.match_score != null && (
+              <div className="font-medium text-fg" title="How well this fits your build (0–100)">
+                {Math.round(d.match_score)} match
+              </div>
+            )}
             <div>{d.retailer_name}</div>
             {d.melbourne_pickup && <div>Melb pickup</div>}
           </div>

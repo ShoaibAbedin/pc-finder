@@ -22,6 +22,7 @@ export interface DealListing {
   price_dropped: boolean | null;
   is_new: boolean | null;
   is_30d_low: boolean | null;
+  match_score?: number | null;
 }
 
 export interface OzDealListing {
@@ -65,7 +66,10 @@ export async function getListings(
   category: string,
   f: DealFilters,
 ): Promise<{ items: DealListing[]; total: number }> {
-  let q = db().from("deal_listings").select(LISTING_COLS, { count: "exact" }).neq("status", "expired");
+  let q = db()
+    .from("deal_listings_ranked")
+    .select(`${LISTING_COLS},match_score`, { count: "exact" })
+    .neq("status", "expired");
 
   if (category !== "all") q = q.eq("category", category);
   if (f.inStockOnly) q = q.eq("status", "active");
@@ -84,6 +88,11 @@ export async function getListings(
       break;
     case "new":
       q = q.order("first_seen_at", { ascending: false });
+      break;
+    case "match":
+      q = q
+        .order("match_score", { ascending: false, nullsFirst: false })
+        .order("drop_pct", { ascending: false, nullsFirst: false });
       break;
     default:
       q = q

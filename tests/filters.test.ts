@@ -11,7 +11,7 @@ describe("parseFilters", () => {
       retailers: [],
       pickupOnly: false,
       inStockOnly: true,
-      sort: "drop",
+      sort: "match",
       page: 1,
     });
   });
@@ -23,7 +23,7 @@ describe("parseFilters", () => {
 
   it("rejects bad input", () => {
     const f = parseFilters({ min: "abc", max: "-5", r: "bad id!", sort: "hack", page: "-2" });
-    expect(f).toMatchObject({ minDollars: undefined, maxDollars: undefined, retailers: [], sort: "drop", page: 1 });
+    expect(f).toMatchObject({ minDollars: undefined, maxDollars: undefined, retailers: [], sort: "match", page: 1 });
   });
 
   it("swaps min/max if reversed", () => {

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { CategoryArt } from "@/components/Art";
 import { DealGrid } from "@/components/DealCard";
 import { Filters } from "@/components/Filters";
 import { OzDealList } from "@/components/OzDealList";
@@ -36,9 +37,12 @@ export default async function CategoryPage({ params, searchParams }: Props) {
 
   return (
     <>
-      <div className="mb-8 flex flex-wrap items-end justify-between gap-4 sm:mb-12">
-        <h1 className="display text-5xl sm:text-7xl">{label}</h1>
-        <p className="text-sm tabular-nums text-muted">{total.toLocaleString("en-AU")} results</p>
+      <div className="mb-8 flex items-center justify-between gap-6 overflow-hidden rounded-[28px] bg-tile px-6 py-6 sm:mb-12 sm:px-10 sm:py-8">
+        <div>
+          <p className="eyebrow">{total.toLocaleString("en-AU")} results</p>
+          <h1 className="display mt-2 text-5xl sm:text-8xl">{label}</h1>
+        </div>
+        <CategoryArt category={category} className="h-24 w-auto shrink-0 text-fg sm:h-40" />
       </div>
 
       <div className="md:flex md:gap-10">

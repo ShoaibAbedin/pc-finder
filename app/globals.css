@@ -78,6 +78,23 @@ summary::-webkit-details-marker {
   display: none;
 }
 
+/* Illustration fans: slow, calm rotation */
+@keyframes fan-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.fan-spin {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: fan-spin 6s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .fan-spin {
+    animation: none;
+  }
+}
+
 input[type="checkbox"] {
   accent-color: var(--fg);
 }

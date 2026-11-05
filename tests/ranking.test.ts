@@ -176,3 +176,27 @@ describe("settingsHash", () => {
     expect(settingsHash(settings({ budget: { total: 3000, perCategory: {} } as Settings["budget"] }))).not.toBe(settingsHash(a));
   });
 });
+
+describe("ranking quality rules", () => {
+  const s = settings({ budget: { total: 2000, perCategory: {} } as Settings["budget"], extras: { ...DEFAULT_SETTINGS.extras, monitor: true } });
+  const b = categoryBudgets(s, targets);
+  it("penalises gaming prebuilts without a dedicated GPU", () => {
+    const office = scoreCandidate(cand({ category: "prebuilt", priceCents: 120000, title: "ASUS NUC 15 Pro Mini PC Core 5 16GB", specs: specs({ pb_gpu: null, tier: 5 }) }), s, targets, b)!;
+    const gamer = scoreCandidate(cand({ category: "prebuilt", priceCents: 150000, title: "Gaming PC RTX 5060 i5", specs: specs({ pb_gpu: "RTX 5060", tier: 5 }) }), s, targets, b)!;
+    expect(office.breakdown.fit).toBeLessThan(0.35);
+    expect(gamer.score).toBeGreaterThan(office.score);
+  });
+  it("penalises portable monitors", () => {
+    const p = scoreCandidate(cand({ category: "monitor", priceCents: 9000, title: "15.6 Inch Portable Monitor", specs: specs({ screen_in: 15.6 }) }), s, targets, b)!;
+    expect(p.breakdown.fit).toBeLessThan(0.35);
+  });
+  it("caps minor categories and favours important ones in For You", () => {
+    const many = (cat: string) => Array.from({ length: 6 }, (_, i) => scoreCandidate(cand({ category: cat, title: `${cat} ${i}`, priceCents: 5000 }), s, targets, b)!);
+    const picked = selectForYou([...many("psu"), ...many("case"), ...many("gpu")], 30);
+    const count = (cat: string) => picked.filter((p) => p.c.category === cat).length;
+    expect(count("psu")).toBe(2);
+    expect(count("case")).toBe(2);
+    expect(count("gpu")).toBe(5);
+    expect(picked[0]!.c.category).toBe("gpu");
+  });
+});

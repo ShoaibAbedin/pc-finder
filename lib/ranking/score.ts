@@ -163,6 +163,19 @@ function fitScore(c: Candidate, s: Settings, t: Targets | null, notes: string[])
     if (lc(sp.ram_type) !== lc(plat.ram_type)) fit -= 0.4;
   }
   if (c.category === "ram" && /so-?dimm|laptop|notebook/i.test(c.title)) fit -= 0.6;
+
+  // Gaming prebuilts need a real graphics card; office mini PCs/NUCs don't qualify.
+  if (c.category === "prebuilt" && s.uses.gaming) {
+    const gpu = lc(sp?.pb_gpu) || (/(rtx|gtx|rx ?\d{4}|radeon rx|arc [ab]\d)/i.test(c.title) ? "dgpu" : "");
+    const integrated = !gpu || /integrated|iris|uhd|radeon graphics|intel graphics|arc graphics/.test(gpu);
+    if (integrated) {
+      fit -= 0.7;
+      notes.push("no dedicated graphics card");
+    }
+    if (/\b(nuc|mini ?pc|tiny|micro desktop|thin client|stick)\b/i.test(c.title)) fit -= 0.3;
+  }
+  // Portable / tiny monitors aren't desk monitors.
+  if (c.category === "monitor" && ((sp?.screen_in && sp.screen_in < 21) || /portable/i.test(c.title))) fit -= 0.6;
   if (plat?.min_psu_w && c.category === "psu" && sp?.wattage && sp.wattage < plat.min_psu_w) fit -= 0.5;
 
   if (c.category === "monitor" && t?.monitor) {
@@ -253,15 +266,21 @@ export function scoreCandidate(
   return { c, score: Math.round(score * 10) / 10, breakdown: b };
 }
 
-/** Top N in-stock items, at most `maxPerCategory` from any one category. */
+/**
+ * Top N in-stock items. Ordered by score × category importance (a great GPU deal matters more than a
+ * great case deal), with per-category caps so cheap parts can't crowd the list.
+ */
 export function selectForYou(scored: Scored[], size = C.forYouSize, maxPerCategory = C.forYouMaxPerCategory): Scored[] {
   const perCat = new Map<string, number>();
   const seenTitles = new Set<string>();
   const out: Scored[] = [];
-  for (const x of [...scored].sort((a, b) => b.score - a.score)) {
+  const weight = (x: Scored) => x.score * (C.categoryImportance[x.c.category] ?? 0.7);
+  const cap = (cat: string) => C.categoryCap[cat] ?? maxPerCategory;
+  for (const x of [...scored].sort((a, b) => weight(b) - weight(a))) {
     if (x.breakdown.stock === 0) continue;
+    if (x.breakdown.fit < 0.35) continue; // poor fits never make For You, however cheap
     const n = perCat.get(x.c.category) ?? 0;
-    if (n >= maxPerCategory) continue;
+    if (n >= Math.min(maxPerCategory, cap(x.c.category))) continue;
     const t = lc(x.c.title).replace(/\s+/g, " ").slice(0, 80);
     if (seenTitles.has(t)) continue; // same product listed twice
     seenTitles.add(t);

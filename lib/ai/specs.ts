@@ -121,8 +121,9 @@ export async function parseSpecsBatch(deps: AiDeps, batch: SpecInput[]) {
     system: SYSTEM,
     user: `Listings (index<TAB>[scraper category hint]<TAB>title):\n${user}`,
     schema: BatchResponse,
-    // ~200 output tokens per item; a tight cap keeps us inside per-minute token limits (Groq counts it up front).
-    maxTokens: Math.min(16_000, 1_000 + batch.length * 260),
+    // ~200 output tokens per item. Groq's free tier counts prompt + max_tokens against an ~8k tokens/minute
+    // allowance up front, so keep the whole request well under that (18 items ≈ 1.6k prompt + 4.9k output).
+    maxTokens: Math.min(16_000, 900 + batch.length * 220),
   });
   return { specs: validateItems(res.data.items, batch), provider: res.provider, model: res.model };
 }
@@ -182,7 +183,7 @@ export async function runSpecParsing(
 ): Promise<{ parsed: number; pending: number; failedBatches: number; stoppedEarly: boolean }> {
   const log = opts.log ?? (() => {});
   const sleep = opts.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
-  const size = opts.batchSize ?? 25;
+  const size = opts.batchSize ?? 18;
   const deadline = Date.now() + (opts.timeBudgetMs ?? 25 * 60_000);
   const minGap = opts.minGapMs ?? 5_000;
   const inputs = await pendingInputs(db, opts.maxBatches * size);
@@ -192,6 +193,7 @@ export async function runSpecParsing(
   let failedBatches = 0;
   let stoppedEarly = false;
   let waits = 0;
+  let consecutiveFails = 0;
   for (let i = 0; i < inputs.length; i += size) {
     if (Date.now() > deadline) {
       log("  time budget used up — remaining titles will be parsed next run");
@@ -223,12 +225,18 @@ export async function runSpecParsing(
         continue;
       }
       failedBatches++;
-      log(`  batch ${i / size + 1} failed: ${(err as Error).message.slice(0, 300)}`);
-      if (err instanceof AiUnavailableError) {
-        stoppedEarly = true; // daily caps or persistent failures — try again next run
+      consecutiveFails++;
+      log(`  batch ${i / size + 1} failed (skipped, retried next run): ${(err as Error).message.slice(0, 300)}`);
+      // Stop only when it's hopeless (daily caps / bad keys) or failing repeatedly; otherwise skip this batch.
+      const hopeless =
+        err instanceof AiUnavailableError && err.attempts.every((a) => /daily cap|HTTP 401|HTTP 403|no AI keys/i.test(a));
+      if (hopeless || consecutiveFails >= 5) {
+        stoppedEarly = true;
         break;
       }
+      continue;
     }
+    consecutiveFails = 0;
   }
   return { parsed, pending: inputs.length - parsed, failedBatches, stoppedEarly };
 }

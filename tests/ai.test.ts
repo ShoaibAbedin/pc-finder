@@ -1,6 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod";
-import { AiUnavailableError, chatJson, extractJson, providersFromEnv, type Provider } from "../lib/ai/client";
+import { AiUnavailableError, chatJson, extractJson, providersFromEnv, resetAiCooldowns, type Provider } from "../lib/ai/client";
+
+beforeEach(() => resetAiCooldowns());
 import { reasonIsSafe } from "../lib/ai/reasons";
 import { validateItems } from "../lib/ai/specs";
 
@@ -42,9 +44,24 @@ describe("chatJson provider fallback", () => {
     expect(r.data.answer).toBe(3);
   });
 
+  it("retries a 503 once, then skips the overloaded model on later calls", async () => {
+    const calls: string[] = [];
+    const deps = {
+      providers,
+      retryDelayMs: 0,
+      fetchImpl: async (u: string) => (calls.push(u), u.includes("gemini") ? new Response("busy", { status: 503 }) : ok('{"answer":4}')),
+    };
+    await chatJson(deps, { system: "s", user: "u", schema: Schema });
+    expect(calls.filter((c) => c.includes("gemini"))).toHaveLength(2); // original + 1 retry
+    calls.length = 0;
+    const r = await chatJson(deps, { system: "s", user: "u", schema: Schema });
+    expect(r.provider).toBe("groq");
+    expect(calls.some((c) => c.includes("gemini"))).toBe(false); // cooling down
+  });
+
   it("throws AiUnavailableError when everything fails", async () => {
     await expect(
-      chatJson({ providers, fetchImpl: async () => new Response("down", { status: 503 }) }, { system: "s", user: "u", schema: Schema }),
+      chatJson({ providers, retryDelayMs: 0, fetchImpl: async () => new Response("down", { status: 503 }) }, { system: "s", user: "u", schema: Schema }),
     ).rejects.toBeInstanceOf(AiUnavailableError);
   });
 
@@ -69,7 +86,7 @@ describe("chatJson provider fallback", () => {
 
   it("reads providers from env (Gemini first)", () => {
     const p = providersFromEnv({ GROQ_API_KEY: "q", GEMINI_API_KEY: "g" } as any);
-    expect(p.map((x) => x.name)).toEqual(["gemini", "groq"]);
+    expect(p.map((x) => `${x.name}:${x.model}`)).toEqual(["gemini:gemini-3.8-flash", "gemini:gemini-3.5-flash-lite", "groq:openai/gpt-oss-120b"]);
     expect(providersFromEnv({} as any)).toEqual([]);
   });
 });

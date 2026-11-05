@@ -17,7 +17,8 @@ export interface Provider {
 export const AI_DEFAULTS = {
   geminiBaseUrl: "https://generativelanguage.googleapis.com/v1beta/openai",
   groqBaseUrl: "https://api.groq.com/openai/v1",
-  geminiModel: "gemini-2.5-flash",
+  // Comma-separated: tried in order. Flash first, Flash-Lite when Flash is overloaded.
+  geminiModel: "gemini-3.8-flash,gemini-3.5-flash-lite",
   groqModel: "openai/gpt-oss-120b",
   // Conservative daily request caps (below the free-tier limits) — adjust in .env if limits change.
   geminiDailyLimit: 200,
@@ -28,13 +29,14 @@ export const AI_DEFAULTS = {
 export function providersFromEnv(env: NodeJS.ProcessEnv = process.env): Provider[] {
   const out: Provider[] = [];
   if (env.GEMINI_API_KEY)
-    out.push({
-      name: "gemini",
-      baseUrl: AI_DEFAULTS.geminiBaseUrl,
-      apiKey: env.GEMINI_API_KEY,
-      model: env.GEMINI_MODEL || AI_DEFAULTS.geminiModel,
-      dailyLimit: Number(env.GEMINI_DAILY_LIMIT) || AI_DEFAULTS.geminiDailyLimit,
-    });
+    for (const model of (env.GEMINI_MODEL || AI_DEFAULTS.geminiModel).split(",").map((m) => m.trim()).filter(Boolean))
+      out.push({
+        name: "gemini",
+        baseUrl: AI_DEFAULTS.geminiBaseUrl,
+        apiKey: env.GEMINI_API_KEY,
+        model,
+        dailyLimit: Number(env.GEMINI_DAILY_LIMIT) || AI_DEFAULTS.geminiDailyLimit,
+      });
   if (env.GROQ_API_KEY)
     out.push({
       name: "groq",
@@ -53,13 +55,22 @@ export class AiUnavailableError extends Error {
   }
 }
 
-type FetchImpl = (url: string, init: RequestInit) => Promise<Response>;
+/** Models that just returned 503/429 are skipped for a while (per process) to save quota and time. */
+const cooldownUntil = new Map<string, number>();
+const COOLDOWN_MS = 5 * 60_000;
+export function resetAiCooldowns() {
+  cooldownUntil.clear();
+}
+
+type FetchImpl =(url: string, init: RequestInit) => Promise<Response>;
 
 export interface AiDeps {
   providers: Provider[];
   db?: SupabaseClient | null; // for usage tracking (optional)
   fetchImpl?: FetchImpl;
   log?: (msg: string) => void;
+  /** Delay before the single retry on HTTP 503. Negative disables the retry (tests). */
+  retryDelayMs?: number;
 }
 
 export interface ChatJsonResult<T> {
@@ -105,6 +116,11 @@ export async function chatJson<S extends z.ZodTypeAny>(
   if (!deps.providers.length) throw new AiUnavailableError(["no AI keys configured"]);
 
   for (const p of deps.providers) {
+    const coolKey = `${p.name}:${p.model}`;
+    if ((cooldownUntil.get(coolKey) ?? 0) > Date.now()) {
+      attempts.push(`${coolKey}: cooling down after overload`);
+      continue;
+    }
     if (deps.db) {
       const used = await usageToday(deps.db, p.name).catch(() => 0);
       if (used >= p.dailyLimit) {
@@ -116,7 +132,7 @@ export async function chatJson<S extends z.ZodTypeAny>(
     let ok = false;
     let tokens = 0;
     try {
-      const res = await fetchImpl(`${p.baseUrl}/chat/completions`, {
+      const send = () => fetchImpl(`${p.baseUrl}/chat/completions`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${p.apiKey}` },
         body: JSON.stringify({
@@ -131,7 +147,15 @@ export async function chatJson<S extends z.ZodTypeAny>(
         }),
         signal: AbortSignal.timeout(AI_DEFAULTS.timeoutMs),
       });
+      let res = await send();
+      // 503 "high demand" is usually momentary — one short retry before falling back.
+      if (res.status === 503 && (deps.retryDelayMs ?? 4000) >= 0) {
+        await res.text();
+        await new Promise((r) => setTimeout(r, deps.retryDelayMs ?? 4000));
+        res = await send();
+      }
       const body = await res.text();
+      if (res.status === 503 || res.status === 429) cooldownUntil.set(coolKey, Date.now() + COOLDOWN_MS);
       if (!res.ok) {
         attempts.push(`${p.name}: HTTP ${res.status} ${body.slice(0, 160).replace(/\s+/g, " ")}`);
         // 400/401/403/404 = our request/key problem; still try the other provider.

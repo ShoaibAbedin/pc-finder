@@ -8,6 +8,9 @@
     "node": ">=22"
   },
   "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
     "scrape": "tsx scrapers/run.ts",
     "scrape:dry": "tsx scrapers/run.ts --dry-run",
     "db:migrate": "tsx scripts/migrate.ts",
@@ -18,11 +21,19 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.119.0",
     "fast-xml-parser": "^5.12.0",
+    "next": "^16.4.5",
     "postgres": "^4.0.0",
-    "robots-parser": "^3.0.1"
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "robots-parser": "^3.0.1",
+    "server-only": "^0.0.1"
   },
   "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.4",
     "@types/node": "^26.6.6",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "tailwindcss": "^4.3.4",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",
     "vitest": "^5.1.0"

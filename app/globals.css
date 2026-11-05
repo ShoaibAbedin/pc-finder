@@ -1,0 +1,61 @@
+@import "tailwindcss";
+
+/* Design tokens: neutral greys + one accent + one "good deal" green. Dark mode follows the OS. */
+:root {
+  --bg: #ffffff;
+  --surface: #ffffff;
+  --muted-bg: #f5f5f4;
+  --fg: #18181b;
+  --muted: #71717a;
+  --border: #e7e5e4;
+  --accent: #2563eb;
+  --good: #047857;
+  --good-bg: #ecfdf5;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0c0c0d;
+    --surface: #151517;
+    --muted-bg: #1e1e21;
+    --fg: #f4f4f5;
+    --muted: #a1a1aa;
+    --border: #2a2a2e;
+    --accent: #60a5fa;
+    --good: #34d399;
+    --good-bg: #052e22;
+  }
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-muted-bg: var(--muted-bg);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-accent: var(--accent);
+  --color-good: var(--good);
+  --color-good-bg: var(--good-bg);
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+}
+
+html {
+  background: var(--bg);
+  color: var(--fg);
+  -webkit-text-size-adjust: 100%;
+}
+body {
+  background: var(--bg);
+}
+
+/* Hide scrollbar on the horizontal category tabs but keep them scrollable */
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+summary::-webkit-details-marker {
+  display: none;
+}

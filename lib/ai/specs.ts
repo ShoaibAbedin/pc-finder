@@ -13,9 +13,17 @@ const num = z.preprocess((v) => {
     return Number.isFinite(n) ? n : null;
   }
   return v;
-}, z.number().nullable());
-const str = z.preprocess((v) => (v === undefined || v === "" ? null : typeof v === "number" ? String(v) : v), z.string().max(120).nullable());
-const bool = z.preprocess((v) => (v === undefined ? null : v), z.boolean().nullable());
+}, z.number().nullable()).catch(null);
+// Lenient: wrong-typed fields become null instead of rejecting the whole item.
+const str = z
+  .preprocess(
+    (v) => (v === undefined || v === "" ? null : typeof v === "number" ? String(v) : typeof v === "boolean" ? (v ? "yes" : "no") : v),
+    z.string().max(120).nullable(),
+  )
+  .catch(null);
+const bool = z
+  .preprocess((v) => (v === undefined ? null : v === "yes" || v === "true" ? true : v === "no" || v === "false" ? false : v), z.boolean().nullable())
+  .catch(null);
 
 /**
  * Structured specs for one listing. Every field is optional (null when not applicable/unknown).

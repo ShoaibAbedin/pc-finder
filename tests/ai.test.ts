@@ -107,12 +107,14 @@ describe("spec validation", () => {
     const out = validateItems(
       [
         { i: 0, category: "gpu", relevant: true, model: "RTX 5070", tier: "6", vram_gb: "12GB", price: 999, price_cents: 99900 },
-        { i: 1, category: "ram", tier: { bad: true } }, // invalid tier type → dropped
+        { i: 1, category: "ram", tier: { bad: true }, modular: true }, // bad field → nulled, item kept
         { i: 7, category: "gpu" }, // index out of range → ignored
       ],
       batch,
     );
-    expect([...out.keys()]).toEqual(["h0"]);
+    expect([...out.keys()]).toEqual(["h0", "h1"]);
+    expect(out.get("h1")!.tier).toBeNull();
+    expect(out.get("h1")!.modular).toBe("yes");
     const s = out.get("h0")!;
     expect(s.tier).toBe(6);
     expect(s.vram_gb).toBe(12);

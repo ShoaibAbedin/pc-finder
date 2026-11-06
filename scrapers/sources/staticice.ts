@@ -8,7 +8,9 @@ import type { Category, RawListing, ScraperModule } from "../core/types";
 const BASE = "https://www.staticice.com.au";
 
 /** Stores we scrape directly — skipped here to avoid duplicate listings. */
-const SCRAPED_DIRECTLY = new Set(["pccasegear", "scorptec", "mwave", "umart", "msy"]);
+// PCCG/Scorptec block cloud servers, so their prices come through StaticICE instead (cross-store
+// matching dedupes them if their own scrapers work again).
+const SCRAPED_DIRECTLY = new Set(["mwave", "umart", "msy"]);
 
 /** Used when there are no AI build targets yet. */
 export const DEFAULT_QUERIES: { category: Category; q: string }[] = [

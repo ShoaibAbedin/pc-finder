@@ -27,7 +27,7 @@ describe("StaticICE parser (real saved page)", () => {
   });
 
   it("skips stores we already scrape directly (no duplicates)", () => {
-    expect(items.some((i) => /mwave/i.test(i.seller!.name))).toBe(false);
+    expect(items.some((i) => /mwave|umart|msy/i.test(i.seller!.name))).toBe(false);
   });
 
   it("gives stable IDs per store+title", () => {

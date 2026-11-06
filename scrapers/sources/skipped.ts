@@ -18,16 +18,12 @@ function skipped(id: string, name: string, reason: string, url: string): Scraper
   };
 }
 
-/** Centre Com is probed for real each run (one request) — if its CAPTCHA ever goes away we'll see it. */
-export const centrecom: ScraperModule = {
-  id: "centrecom",
-  name: "Centre Com",
-  kind: "retailer",
-  async scrape({ fetch }) {
-    await fetch.text("https://www.centrecom.com.au/graphics-cards"); // throws BlockedError on the CAPTCHA
-    throw new Error("Centre Com is reachable again — a scraper can now be built for it");
-  },
-};
+export const centrecom = skipped(
+  "centrecom",
+  "Centre Com",
+  "Skipped: Centre Com shows a CAPTCHA (AWS WAF) to automated requests. Its prices still arrive via StaticICE/OzBargain.",
+  "https://www.centrecom.com.au/",
+);
 
 export const jbhifi = skipped(
   "jbhifi",

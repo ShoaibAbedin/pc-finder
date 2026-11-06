@@ -1,4 +1,5 @@
 import "server-only";
+import type { BuildResult } from "../build/assembler";
 import { createServiceClient } from "../db/client";
 
 export interface ForYouItem {
@@ -53,6 +54,15 @@ export async function getForYou(): Promise<{ items: ForYouItem[]; rankedAt: stri
     };
   });
   return { items, rankedAt: latest!.created_at, hasPrevious: !!previous };
+}
+
+/** Latest assembled builds + how the best build's total changed since the previous update. */
+export async function getBuilds(): Promise<{ result: BuildResult | null; prevBestTotal: number | null }> {
+  const db = createServiceClient();
+  const { data } = await db.from("ranking_runs").select("builds").not("builds", "is", null).order("id", { ascending: false }).limit(2);
+  const [latest, prev] = (data ?? []) as { builds: BuildResult }[];
+  const prevBest = prev?.builds?.builds?.find((b) => b.label === "best")?.totalCents ?? null;
+  return { result: latest?.builds ?? null, prevBestTotal: prevBest };
 }
 
 export async function hasSettings(): Promise<boolean> {

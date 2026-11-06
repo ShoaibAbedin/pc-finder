@@ -3,6 +3,7 @@ import type { Targets } from "../ai/targets";
 import { BUILD_CATEGORIES, isVictoria, type Settings } from "../settings/schema";
 import { rankingConfig as C } from "./config";
 import { sameProduct } from "./match";
+import { estimateTier, monitorResolution } from "./tiers";
 
 export interface Candidate {
   key: string; // "p:<id>" | "oz:<node id>"
@@ -106,11 +107,12 @@ function fitScore(c: Candidate, s: Settings, t: Targets | null, notes: string[])
   const title = lc(c.title);
   let fit = 0.5;
 
-  if (sp?.tier && target) {
-    const tier = sp.tier;
+  // Known GPU/CPU models use the built-in tier table (consistent across stores); otherwise the AI's tier.
+  const tier = estimateTier(c.category, c.title) ?? sp?.tier ?? null;
+  if (tier && target) {
     if (tier < target.min_tier) fit = 0.25 * (tier / target.min_tier);
     else fit = 1 - Math.min(1, Math.abs(tier - target.ideal_tier) / 4) * 0.6;
-    if (Math.abs(tier - target.ideal_tier) <= 1 && tier >= target.min_tier) notes.push(`right tier for your build (${sp.model ?? c.category})`);
+    if (Math.abs(tier - target.ideal_tier) <= 1 && tier >= target.min_tier) notes.push(`right tier for your build (${sp?.model ?? c.category})`);
     else if (tier < target.min_tier) notes.push("below your target tier");
   }
   if (target) {
@@ -179,9 +181,19 @@ function fitScore(c: Candidate, s: Settings, t: Targets | null, notes: string[])
   if (c.category === "monitor" && ((sp?.screen_in && sp.screen_in < 21) || /portable/i.test(c.title))) fit -= 0.6;
   if (plat?.min_psu_w && c.category === "psu" && sp?.wattage && sp.wattage < plat.min_psu_w) fit -= 0.5;
 
-  if (c.category === "monitor" && t?.monitor) {
-    if (t.monitor.resolution && sp?.resolution && !lc(sp.resolution).includes(lc(t.monitor.resolution).replace("ultrawide ", ""))) fit -= 0.3;
-    if (t.monitor.min_refresh_hz && sp?.refresh_hz && sp.refresh_hz < t.monitor.min_refresh_hz) fit -= 0.2;
+  if (c.category === "monitor") {
+    // Match the gaming resolution from settings (or the AI target); read resolution/refresh from specs or title.
+    const want = s.uses.gaming ? (s.uses.resolution === "ultrawide" ? "1440p" : s.uses.resolution) : monitorResolution(t?.monitor?.resolution, "");
+    const have = monitorResolution(sp?.resolution, c.title);
+    if (want && have) {
+      if (have === want) {
+        fit += 0.15;
+        notes.push(`${want} monitor as you game at`);
+      } else fit -= 0.35;
+    }
+    const hz = sp?.refresh_hz ?? Number(c.title.match(/(\d{2,3})\s?hz/i)?.[1] ?? 0);
+    const minHz = t?.monitor?.min_refresh_hz ?? (s.uses.gaming ? 120 : 0);
+    if (hz && minHz && hz < minHz) fit -= 0.3;
   }
   return clamp(fit);
 }

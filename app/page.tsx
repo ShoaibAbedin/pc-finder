@@ -6,7 +6,8 @@ import { DealGrid } from "@/components/DealCard";
 import { Features } from "@/components/Features";
 import { ForYouList } from "@/components/ForYouList";
 import { EmptyState, Section } from "@/components/Section";
-import { getForYou, hasSettings } from "@/lib/deals/forYou";
+import { BuildCard } from "@/components/BuildCard";
+import { getBuilds, getForYou, hasSettings } from "@/lib/deals/forYou";
 import { getPriceDrops } from "@/lib/deals/queries";
 import { timeAgo } from "@/lib/format";
 
@@ -15,7 +16,7 @@ export const dynamic = "force-dynamic";
 export default async function Home() {
   if (!(await hasSettings())) redirect("/onboarding");
 
-  const [{ items, rankedAt }, drops] = await Promise.all([getForYou(), getPriceDrops(8)]);
+  const [{ items, rankedAt }, drops, builds] = await Promise.all([getForYou(), getPriceDrops(8), getBuilds()]);
 
   return (
     <>
@@ -28,8 +29,11 @@ export default async function Home() {
             pickup.
           </p>
           <div className="mt-7 flex flex-wrap gap-3">
-            <a href="#picks" className="btn btn-primary">
-              See my picks
+            <a href="#build" className="btn btn-primary">
+              See my build
+            </a>
+            <a href="#picks" className="btn btn-outline">
+              Top picks
             </a>
             <Link href="/settings" className="btn btn-outline">
               Edit preferences
@@ -40,6 +44,15 @@ export default async function Home() {
           <HeroArt className="h-auto w-full" />
         </div>
       </section>
+
+      {builds.result && builds.result.builds.length + builds.result.extras.length > 0 && (
+        <section id="build" className="mb-16 scroll-mt-44 sm:mb-20">
+          <div className="mb-5 flex items-end justify-between gap-4">
+            <h2 className="display text-4xl sm:text-5xl">Your best build right now</h2>
+          </div>
+          <BuildCard result={builds.result} prevBestTotal={builds.prevBestTotal} />
+        </section>
+      )}
 
       <section className="mb-16 sm:mb-20">
         <Features />

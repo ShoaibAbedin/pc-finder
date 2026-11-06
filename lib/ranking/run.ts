@@ -6,6 +6,7 @@ import { writeReasons } from "../ai/reasons";
 import { settingsHash, type Settings } from "../settings/schema";
 import { loadSettings } from "../settings/store";
 import { rankingConfig } from "./config";
+import { assembleBuilds } from "../build/assembler";
 import { buildPartIndex, partsTotalFor } from "./prebuilt";
 import { categoryBudgets, otherOffers, scoreCandidate, selectForYou, type Candidate, type Scored } from "./score";
 
@@ -140,14 +141,19 @@ export async function runRanking(
   }
 
   const cands = await loadCandidates(db);
-  const { scored, forYou } = rankAll(cands, s, targets);
+  const { scored, forYou, budgets } = rankAll(cands, s, targets);
   log(`ranking: ${cands.length} candidates, ${scored.length} relevant, ${forYou.length} in For You`);
 
   const reasons = await writeReasons(db, deps, forYou, log);
 
+  const builds = assembleBuilds(scored, s, budgets);
+  log(
+    `builds: ${builds.builds.map((b) => `${b.label} $${Math.round(b.totalCents / 100)}`).join(", ") || "none"}${builds.notes.length ? ` (${builds.notes.join("; ")})` : ""}`,
+  );
+
   const { data: run, error } = await db
     .from("ranking_runs")
-    .insert({ settings_hash: settingsHash(s), item_count: scored.length })
+    .insert({ settings_hash: settingsHash(s), item_count: scored.length, builds })
     .select("id")
     .single();
   if (error) throw new Error(`ranking_runs: ${error.message}`);

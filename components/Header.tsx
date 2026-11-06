@@ -3,6 +3,7 @@ import { getLastUpdated } from "@/lib/deals/queries";
 import { melbourneTime, timeAgo } from "@/lib/format";
 import { isStale } from "@/lib/schedule";
 import { CategoryNav } from "./CategoryNav";
+import { LogoMark } from "./Logo";
 import { RefreshButton } from "./RefreshButton";
 
 const BLACK_FRIDAY = new Date("2026-11-27T00:00:00+11:00");
@@ -28,7 +29,8 @@ export async function Header() {
       </div>
       <div className="border-b border-border bg-bg/90 backdrop-blur-md">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-8 sm:py-4">
-          <Link href="/" className="display text-2xl sm:text-[28px]">
+          <Link href="/" className="display flex items-center gap-2.5 text-2xl sm:text-[28px]">
+            <LogoMark className="size-8 sm:size-9" />
             PC Finder
           </Link>
           <div className="flex min-w-0 items-center gap-2 sm:gap-3">

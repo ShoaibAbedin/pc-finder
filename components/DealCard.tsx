@@ -1,9 +1,20 @@
 import { categoryLabel } from "@/lib/categories";
 import type { DealListing } from "@/lib/deals/queries";
 import { formatPrice } from "@/lib/format";
+import { CategoryArt } from "./Art";
 import { Badge } from "./Badge";
 
-export function ProductImage({ src, dim, className = "" }: { src: string | null; dim?: boolean; className?: string }) {
+export function ProductImage({
+  src,
+  dim,
+  category,
+  className = "",
+}: {
+  src: string | null;
+  dim?: boolean;
+  category?: string;
+  className?: string;
+}) {
   return (
     <div className={`flex items-center justify-center overflow-hidden bg-tile ${className}`}>
       {src ? (
@@ -16,6 +27,9 @@ export function ProductImage({ src, dim, className = "" }: { src: string | null;
           referrerPolicy="no-referrer"
           className={`h-full w-full object-contain mix-blend-multiply transition-transform duration-300 group-hover:scale-[1.04] ${dim ? "opacity-50" : ""}`}
         />
+      ) : category ? (
+        // Store didn't provide a photo — show our illustration for the category instead
+        <CategoryArt category={category} className={`h-3/5 w-3/5 text-fg/70 ${dim ? "opacity-50" : ""}`} />
       ) : (
         <span className="eyebrow">No image</span>
       )}
@@ -28,7 +42,7 @@ export function DealCard({ d }: { d: DealListing }) {
   return (
     <a href={d.url} target="_blank" rel="noopener noreferrer" className="group flex flex-col">
       <div className="relative">
-        <ProductImage src={d.image_url} dim={outOfStock} className="aspect-square rounded-2xl p-6 sm:p-8" />
+        <ProductImage src={d.image_url} dim={outOfStock} category={d.category} className="aspect-square rounded-2xl p-6 sm:p-8" />
         <div className="absolute left-3 top-3 flex flex-wrap gap-1">
           {d.is_new && <Badge kind="new">New</Badge>}
           {d.price_dropped && <Badge kind="drop">Price drop</Badge>}

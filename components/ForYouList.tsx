@@ -40,7 +40,7 @@ export function ForYouList({ items }: { items: ForYouItem[] }) {
               <span className="display text-3xl tabular-nums sm:text-4xl">{d.rank}</span>
               <RankChange change={d.change} />
             </div>
-            <ProductImage src={d.image_url} className="size-24 shrink-0 rounded-xl p-2 sm:size-32 sm:p-3" />
+            <ProductImage src={d.image_url} category={d.category} className="size-24 shrink-0 rounded-xl p-2 sm:size-32 sm:p-3" />
             <div className="flex min-w-0 flex-1 flex-col">
               <div className="flex flex-wrap items-center gap-1.5">
                 <span className="eyebrow">{categoryLabel(d.category) ?? d.category}</span>
@@ -50,6 +50,17 @@ export function ForYouList({ items }: { items: ForYouItem[] }) {
               </div>
               <p className="mt-1 line-clamp-2 text-sm font-medium leading-snug sm:text-[15px]">{d.title}</p>
               {d.reason && <p className="mt-1.5 line-clamp-2 text-xs text-good sm:text-sm">{d.reason}</p>}
+              {d.also && d.also.length > 0 && (
+                <p className="mt-1 text-xs text-muted">
+                  Also at{" "}
+                  {d.also.map((o, i) => (
+                    <span key={o.retailer}>
+                      {i > 0 && " · "}
+                      {o.retailer} {formatPrice(o.priceCents)}
+                    </span>
+                  ))}
+                </p>
+              )}
               <div className="mt-auto flex flex-wrap items-end justify-between gap-2 pt-2">
                 <div className="text-xs text-muted">
                   {d.retailer_name ?? "—"}

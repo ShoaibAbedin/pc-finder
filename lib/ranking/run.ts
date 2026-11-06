@@ -7,7 +7,7 @@ import { settingsHash, type Settings } from "../settings/schema";
 import { loadSettings } from "../settings/store";
 import { rankingConfig } from "./config";
 import { buildPartIndex, partsTotalFor } from "./prebuilt";
-import { categoryBudgets, scoreCandidate, selectForYou, type Candidate, type Scored } from "./score";
+import { categoryBudgets, otherOffers, scoreCandidate, selectForYou, type Candidate, type Scored } from "./score";
 
 const PAGE = 1000;
 
@@ -178,6 +178,7 @@ export async function runRanking(
             source: x.c.source,
             votes: x.c.votes ?? null,
             reason: reasons.get(x.c.key) ?? null,
+            also: otherOffers(x, scored),
           }
         : null,
     };

@@ -22,6 +22,7 @@ export interface ForYouItem {
   source: "product" | "oz";
   votes: number | null;
   reason: string | null;
+  also?: { retailer: string; priceCents: number; url: string }[];
 }
 
 export async function getForYou(): Promise<{ items: ForYouItem[]; rankedAt: string | null; hasPrevious: boolean }> {

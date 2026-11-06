@@ -63,6 +63,8 @@ export async function saveListings(
         category: l.category,
         brand: l.brand ?? null,
         image_url: l.imageUrl ?? null,
+        seller_name: l.seller?.name ?? null,
+        seller_vic: l.seller ? l.seller.vic : null,
         current_price_cents: l.priceCents,
         retailer_was_price_cents: l.retailerWasPriceCents ?? null,
         in_stock: l.inStock,

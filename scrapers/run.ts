@@ -21,6 +21,8 @@ import { BlockedError, PoliteFetcher, RobotsDisallowedError } from "./core/fetch
 import { createLogger } from "./core/logger";
 import type { ScrapeOutput, ScraperModule } from "./core/types";
 import { scrapers } from "./registry";
+import { queriesFromTargets } from "./sources/staticice";
+import { loadTargets } from "../lib/ai/targets";
 
 interface Args {
   dryRun: boolean;
@@ -60,7 +62,12 @@ function printDryRun(s: ScraperModule, out: ScrapeOutput) {
   }
 }
 
-async function runOne(s: ScraperModule, args: Args, db: SupabaseClient | null): Promise<string> {
+async function runOne(
+  s: ScraperModule,
+  args: Args,
+  db: SupabaseClient | null,
+  searchQueries: ReturnType<typeof queriesFromTargets>,
+): Promise<string> {
   const log = createLogger(s.id);
   const fetcher = new PoliteFetcher({ log });
   const startedAt = new Date().toISOString();
@@ -68,7 +75,7 @@ async function runOne(s: ScraperModule, args: Args, db: SupabaseClient | null): 
   log.info("starting");
 
   try {
-    const out = await s.scrape({ fetch: fetcher, log, maxPages: args.maxPages });
+    const out = await s.scrape({ fetch: fetcher, log, maxPages: args.maxPages, searchQueries });
 
     if (!db || runId === null) {
       printDryRun(s, out);
@@ -139,8 +146,12 @@ async function main() {
   const db = args.dryRun ? null : createServiceClient();
   const t0 = Date.now();
 
+  // Search terms for StaticICE come from the AI build targets (recommended models), if any.
+  const targets = db ? await loadTargets(db).catch(() => null) : null;
+  const searchQueries = queriesFromTargets(targets?.data ?? null);
+
   // Different sites run in parallel; requests to the same site are still serialised + delayed.
-  const results = await Promise.all(selected.map((s) => runOne(s, args, db)));
+  const results = await Promise.all(selected.map((s) => runOne(s, args, db, searchQueries)));
 
   console.log(`\n=== Done in ${((Date.now() - t0) / 1000).toFixed(0)}s ===`);
   for (const r of results) console.log(" -", r);

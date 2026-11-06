@@ -14,13 +14,14 @@
     "scrape": "tsx scrapers/run.ts",
     "scrape:dry": "tsx scrapers/run.ts --dry-run",
     "process": "tsx scripts/process.ts",
-    "db:migrate":"tsx scripts/migrate.ts",
+    "db:migrate": "tsx scripts/migrate.ts",
     "db:check": "tsx scripts/db-check.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.119.0",
+    "cheerio": "^1.2.0",
     "fast-xml-parser": "^5.12.0",
     "next": "^16.4.5",
     "postgres": "^4.0.0",

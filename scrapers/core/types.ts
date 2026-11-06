@@ -31,6 +31,8 @@ export interface RawListing {
   inStock: boolean | null; // null = unknown
   brand?: string;
   imageUrl?: string;
+  /** For aggregator listings: the actual store selling it. */
+  seller?: { name: string; vic: boolean };
 }
 
 /** One OzBargain deal post. */
@@ -67,6 +69,8 @@ export interface ScrapeContext {
   log: Logger;
   /** Optional cap on listing pages per category (for quick test runs). */
   maxPages?: number;
+  /** Search terms for query-based sources (StaticICE), derived from the AI build targets. */
+  searchQueries?: { category: Category; q: string }[];
 }
 
 /**

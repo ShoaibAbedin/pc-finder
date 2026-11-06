@@ -2,6 +2,7 @@ import type { Specs } from "../ai/specs";
 import type { Targets } from "../ai/targets";
 import { BUILD_CATEGORIES, isVictoria, type Settings } from "../settings/schema";
 import { rankingConfig as C } from "./config";
+import { sameProduct } from "./match";
 
 export interface Candidate {
   key: string; // "p:<id>" | "oz:<node id>"
@@ -283,12 +284,30 @@ export function selectForYou(scored: Scored[], size = C.forYouSize, maxPerCatego
     if (n >= Math.min(maxPerCategory, cap(x.c.category))) continue;
     const t = lc(x.c.title).replace(/\s+/g, " ").slice(0, 80);
     if (seenTitles.has(t)) continue; // same product listed twice
+    if (out.some((y) => sameProduct(y.c, x.c))) continue; // same product at another store — shown via "Also at"
     seenTitles.add(t);
     perCat.set(x.c.category, n + 1);
     out.push(x);
     if (out.length >= size) break;
   }
   return out;
+}
+
+export interface OtherOffer {
+  retailer: string;
+  priceCents: number;
+  url: string;
+}
+
+/** Other in-stock offers of the same product (cheapest first), for the "Also at" line. */
+export function otherOffers(x: Scored, all: Scored[], max = 3): OtherOffer[] {
+  return all
+    .filter((y) => y.c.key !== x.c.key && y.c.source === "product" && y.breakdown.stock > 0 && y.c.priceCents && sameProduct(x.c, y.c))
+    .sort((a, b) => a.c.priceCents! - b.c.priceCents!)
+    .filter((y, i, arr) => arr.findIndex((z) => z.c.retailerName === y.c.retailerName) === i) // one per store
+    .filter((y) => y.c.retailerName !== x.c.retailerName)
+    .slice(0, max)
+    .map((y) => ({ retailer: y.c.retailerName ?? "?", priceCents: y.c.priceCents!, url: y.c.url }));
 }
 
 /** Deterministic fallback reason (used when AI is unavailable or its output fails validation). */

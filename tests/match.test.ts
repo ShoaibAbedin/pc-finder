@@ -23,3 +23,16 @@ describe("sameProduct variants", () => {
     expect(sameProduct(p("Sapphire Pulse Radeon RX 9070 XT 16GB"), p("Sapphire Pulse Radeon RX 9070 16GB"))).toBe(false);
   });
 });
+
+describe("CPU matching by model number", () => {
+  it("matches the same CPU across very different store titles", () => {
+    expect(sameProduct(p("AMD Ryzen 5 7600 Processor with Wraith Stealth [100-100001015BOX]", "cpu"), p("AMD Ryzen 5 7600 6 Core 12 Threads up to 5.1 GHz AM5", "cpu"))).toBe(true);
+    expect(sameProduct(p("Intel Core Ultra 7 265K Processor", "cpu"), p("Intel Core Ultra 7 265K 20 Core LGA1851 CPU", "cpu"))).toBe(true);
+    expect(sameProduct(p("Intel Core i5-14400F Processor", "cpu"), p("Intel Core i5 14400F 10 Core", "cpu"))).toBe(true);
+  });
+  it("keeps X / X3D / F variants apart", () => {
+    expect(sameProduct(p("AMD Ryzen 5 7600 6 Core CPU", "cpu"), p("AMD Ryzen 5 7600X 6 Core CPU", "cpu"))).toBe(false);
+    expect(sameProduct(p("AMD Ryzen 7 7800X3D", "cpu"), p("AMD Ryzen 7 7800X", "cpu"))).toBe(false);
+    expect(sameProduct(p("Intel Core i5-14400F", "cpu"), p("Intel Core i5-14400", "cpu"))).toBe(false);
+  });
+});

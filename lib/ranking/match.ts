@@ -47,8 +47,24 @@ const keyNumbers = (s: Set<string>) => new Set([...s].filter((t) => /^\d/.test(t
 const variants = (s: Set<string>) => [...s].filter((t) => VARIANTS.has(t)).sort().join(",");
 const isSubset = (a: Set<string>, b: Set<string>) => [...a].every((t) => b.has(t));
 
+/** CPU model number: "Ryzen 5 7600" → "7600", "7800X3D" → "7800x3d", "Core Ultra 7 265K" → "265k", "i5-14400F" → "14400f". */
+export function cpuModel(title: string): string | null {
+  const t = title.toLowerCase();
+  const m =
+    t.match(/\bryzen\s+(?:threadripper\s+)?\d\s+(?:pro\s+)?(\d{4}[a-z0-9]*)\b/) ??
+    t.match(/\bultra\s+\d\s+(\d{3}[a-z]{0,2})\b/) ??
+    t.match(/\bi[3579][- ](\d{4,5}[a-z]{0,2})\b/);
+  return m?.[1] ?? null;
+}
+
 export function sameProduct(a: { title: string; category: string }, b: { title: string; category: string }): boolean {
   if (a.category !== b.category) return false;
+  if (a.category === "cpu") {
+    // Stores word CPU titles very differently, but the model number identifies it exactly.
+    const ma = cpuModel(a.title);
+    const mb = cpuModel(b.title);
+    if (ma && mb) return ma === mb;
+  }
   const brandA = a.title.split(/\s+/)[0]!.toLowerCase();
   const brandB = b.title.split(/\s+/)[0]!.toLowerCase();
   if (brandA !== brandB) return false;

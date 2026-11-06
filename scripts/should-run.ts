@@ -6,7 +6,7 @@
  */
 import { appendFileSync } from "node:fs";
 import { createServiceClient, loadEnv } from "../lib/db/client";
-import { parseIntervalHours, shouldRunUpdate } from "../lib/schedule";
+import { DEFAULT_BF_INTERVAL_HOURS, effectiveIntervalHours, parseIntervalHours, shouldRunUpdate } from "../lib/schedule";
 
 loadEnv();
 const db = createServiceClient();
@@ -18,11 +18,17 @@ const { data, error } = await db
   .limit(1);
 if (error) throw new Error(`scrape_runs: ${error.message}`);
 
+const now = new Date();
+const interval = effectiveIntervalHours(
+  parseIntervalHours(process.env.UPDATE_INTERVAL_HOURS),
+  parseIntervalHours(process.env.BF_INTERVAL_HOURS ?? String(DEFAULT_BF_INTERVAL_HOURS)),
+  now,
+);
 const decision = shouldRunUpdate({
   lastSuccessStart: data?.[0] ? new Date(data[0].started_at) : null,
-  intervalHours: parseIntervalHours(process.env.UPDATE_INTERVAL_HOURS),
-  now: new Date(),
+  intervalHours: interval.hours,
+  now,
   force: process.env.FORCE === "true",
 });
-console.log(`${decision.run ? "RUN" : "SKIP"}: ${decision.reason}`);
+console.log(`${decision.run ? "RUN" : "SKIP"}: ${decision.reason}${interval.blackFriday ? " [Black Friday window]" : ""}`);
 if (process.env.GITHUB_OUTPUT) appendFileSync(process.env.GITHUB_OUTPUT, `run=${decision.run}\n`);

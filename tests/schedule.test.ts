@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { decideRefresh, isStale, parseIntervalHours, shouldRunUpdate, type WorkflowRunInfo } from "../lib/schedule";
+import { blackFridayWindow, decideRefresh, effectiveIntervalHours, isStale, parseIntervalHours, shouldRunUpdate, type WorkflowRunInfo } from "../lib/schedule";
 
 const at = (h: number) => new Date(Date.UTC(2026, 10, 6, 0, 0) + h * 3_600_000);
 
@@ -7,15 +7,14 @@ describe("shouldRunUpdate", () => {
   it("runs when there has never been an update", () => {
     expect(shouldRunUpdate({ lastSuccessStart: null, intervalHours: 10, now: at(0) }).run).toBe(true);
   });
-  it("waits until the interval (minus 1 h tolerance for the 2-hourly check) has passed", () => {
-    expect(shouldRunUpdate({ lastSuccessStart: at(0), intervalHours: 10, now: at(8) }).run).toBe(false);
-    expect(shouldRunUpdate({ lastSuccessStart: at(0), intervalHours: 10, now: at(9.2) }).run).toBe(true);
+  it("waits until the interval (minus 2 h tolerance for the 4-hourly check) has passed", () => {
+    expect(shouldRunUpdate({ lastSuccessStart: at(0), intervalHours: 12, now: at(8) }).run).toBe(false);
+    expect(shouldRunUpdate({ lastSuccessStart: at(0), intervalHours: 12, now: at(10.5) }).run).toBe(true);
   });
-  it("a 10 h interval doesn't drift to 12 h with 2-hourly checks", () => {
-    // last update at 00:05, checks at 02:17, 04:17 ... the 10:17 check must run
-    const last = at(5 / 60);
-    expect(shouldRunUpdate({ lastSuccessStart: last, intervalHours: 10, now: at(10 + 17 / 60) }).run).toBe(true);
-    expect(shouldRunUpdate({ lastSuccessStart: last, intervalHours: 10, now: at(8 + 17 / 60) }).run).toBe(false);
+  it("a 12 h interval doesn't drift to 16 h with 4-hourly checks", () => {
+    const last = at(5 / 60); // checks at 04:17, 08:17, 12:17 ... the 12:17 check must run
+    expect(shouldRunUpdate({ lastSuccessStart: last, intervalHours: 12, now: at(12 + 17 / 60) }).run).toBe(true);
+    expect(shouldRunUpdate({ lastSuccessStart: last, intervalHours: 12, now: at(8 + 17 / 60) }).run).toBe(false);
   });
   it("supports faster intervals (Black Friday week)", () => {
     expect(shouldRunUpdate({ lastSuccessStart: at(0), intervalHours: 4, now: at(3.5) }).run).toBe(true);
@@ -25,9 +24,9 @@ describe("shouldRunUpdate", () => {
   });
   it("parses the interval safely", () => {
     expect(parseIntervalHours("4")).toBe(4);
-    expect(parseIntervalHours(undefined)).toBe(10);
-    expect(parseIntervalHours("0")).toBe(10);
-    expect(parseIntervalHours("abc")).toBe(10);
+    expect(parseIntervalHours(undefined)).toBe(12);
+    expect(parseIntervalHours("0")).toBe(12);
+    expect(parseIntervalHours("abc")).toBe(12);
   });
 });
 
@@ -50,5 +49,21 @@ describe("isStale", () => {
     expect(isStale(at(0).toISOString(), now)).toBe(true);
     expect(isStale(at(10).toISOString(), now)).toBe(false);
     expect(isStale(null, now)).toBe(true);
+  });
+});
+
+describe("Black Friday window", () => {
+  it("2026: Black Friday is 27 Nov; window 24 Nov – 1 Dec (Melbourne)", () => {
+    const w = blackFridayWindow(2026);
+    expect(w.start.toISOString()).toBe("2026-11-23T13:00:00.000Z"); // 24 Nov 00:00 AEDT
+    expect(w.end.toISOString()).toBe("2026-12-01T13:00:00.000Z"); // 2 Dec 00:00 AEDT
+  });
+  it("switches to the faster interval only inside the window", () => {
+    expect(effectiveIntervalHours(12, 8, new Date("2026-11-10T00:00:00Z"))).toEqual({ hours: 12, blackFriday: false });
+    expect(effectiveIntervalHours(12, 8, new Date("2026-11-27T00:00:00Z"))).toEqual({ hours: 8, blackFriday: true });
+    expect(effectiveIntervalHours(12, 8, new Date("2026-12-03T00:00:00Z"))).toEqual({ hours: 12, blackFriday: false });
+  });
+  it("finds the right Black Friday in other years", () => {
+    expect(blackFridayWindow(2027).start.toISOString().slice(0, 10)).toBe("2027-11-22"); // BF 26 Nov 2027
   });
 });

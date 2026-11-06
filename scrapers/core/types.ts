@@ -81,5 +81,7 @@ export interface ScraperModule {
   id: string; // must match retailers.id in the database
   name: string;
   kind: "retailer" | "aggregator";
+  /** Per-site delay between requests (defaults to scraperConfig). A robots.txt Crawl-delay always wins if larger. */
+  politeness?: { minDelayMs: number; maxDelayMs: number };
   scrape(ctx: ScrapeContext): Promise<ScrapeOutput>;
 }

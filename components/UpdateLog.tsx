@@ -56,7 +56,7 @@ export async function UpdateLog() {
       <p className="text-xs text-muted">
         Ranking {rank?.[0] ? `updated ${timeAgo(rank[0].created_at)}` : "not run yet"} · AI requests today:{" "}
         {(ai ?? []).map((a) => `${a.provider} ${a.requests}${a.failures ? ` (${a.failures} failed)` : ""}`).join(", ") || "none"} ·
-        Update interval: GitHub repo → Settings → Secrets and variables → Actions → Variables → UPDATE_INTERVAL_HOURS (default 10)
+        Update interval: GitHub repo → Settings → Secrets and variables → Actions → Variables → UPDATE_INTERVAL_HOURS (default 12; 8 h automatically in Black Friday week)
       </p>
     </div>
   );

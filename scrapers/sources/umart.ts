@@ -64,6 +64,9 @@ function makeModule(id: string, name: string, base: string): ScraperModule {
     id,
     name,
     kind: "retailer",
+    // ~180 pages per run; no Crawl-delay in robots.txt. 2–3 s keeps it polite while halving run time
+    // (GitHub Actions minutes are limited on the free private plan).
+    politeness: { minDelayMs: 2000, maxDelayMs: 3000 },
     async scrape({ fetch, log, maxPages }) {
       const byId = new Map<string, RawListing>();
       const completed: Category[] = [];

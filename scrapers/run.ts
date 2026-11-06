@@ -69,7 +69,7 @@ async function runOne(
   searchQueries: ReturnType<typeof queriesFromTargets>,
 ): Promise<string> {
   const log = createLogger(s.id);
-  const fetcher = new PoliteFetcher({ log });
+  const fetcher = new PoliteFetcher({ log, ...s.politeness });
   const startedAt = new Date().toISOString();
   const runId = db ? await startRun(db, s.id, startedAt) : null;
   log.info("starting");

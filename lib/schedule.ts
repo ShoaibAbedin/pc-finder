@@ -4,8 +4,28 @@
  * GitHub's cron wakes us every 2 hours; `shouldRunUpdate` decides whether an update is due based on
  * UPDATE_INTERVAL_HOURS. A tolerance equal to half the check period stops a 10 h interval drifting to 12 h.
  */
-export const CHECK_PERIOD_HOURS = 2;
-export const DEFAULT_INTERVAL_HOURS = 10;
+export const CHECK_PERIOD_HOURS = 4; // GitHub cron wakes every 4 h (each wake-up costs a billed minute)
+export const DEFAULT_INTERVAL_HOURS = 12;
+export const DEFAULT_BF_INTERVAL_HOURS = 8;
+
+/**
+ * Black Friday = the day after the 4th Thursday of November. The faster-update window runs from
+ * 3 days before until Cyber Monday + 1 (Melbourne dates), e.g. 2026: 24 Nov – 1 Dec.
+ */
+export function blackFridayWindow(year: number): { start: Date; end: Date } {
+  const nov1 = new Date(Date.UTC(year, 10, 1));
+  const firstThu = 1 + ((4 - nov1.getUTCDay() + 7) % 7);
+  const bf = firstThu + 21 + 1; // 4th Thursday + 1
+  // Melbourne is UTC+11 in November: local midnight = 13:00 UTC the previous day
+  return { start: new Date(Date.UTC(year, 10, bf - 3) - 11 * 3_600_000), end: new Date(Date.UTC(year, 10, bf + 5) - 11 * 3_600_000) };
+}
+
+/** The interval to use now: the Black Friday interval inside the window, otherwise the normal one. */
+export function effectiveIntervalHours(normal: number, bf: number, now: Date): { hours: number; blackFriday: boolean } {
+  const w = blackFridayWindow(now.getUTCFullYear());
+  const inWindow = now >= w.start && now < w.end;
+  return inWindow ? { hours: Math.min(normal, bf), blackFriday: true } : { hours: normal, blackFriday: false };
+}
 
 export function parseIntervalHours(v: string | undefined): number {
   const n = Number(v);

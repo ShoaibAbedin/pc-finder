@@ -5,9 +5,12 @@
  *   npm run process -- --rank-only        # skip spec parsing
  */
 import { providersFromEnv } from "../lib/ai/client";
+import { runAlerts } from "../lib/alerts/run";
 import { runSpecParsing } from "../lib/ai/specs";
 import { createServiceClient, loadEnv } from "../lib/db/client";
 import { runRanking } from "../lib/ranking/run";
+import { wantedCategories } from "../lib/settings/schema";
+import { loadSettings } from "../lib/settings/store";
 
 loadEnv();
 const argv = process.argv.slice(2);
@@ -21,9 +24,15 @@ if (!deps.providers.length) log("WARNING: no GEMINI_API_KEY / GROQ_API_KEY — A
 if (!argv.includes("--rank-only") && deps.providers.length) {
   const maxBatches = Number(arg("max-batches") ?? process.env.AI_MAX_BATCHES_PER_RUN ?? 60);
   const minutes = Number(arg("minutes") ?? process.env.AI_MINUTES_PER_RUN ?? 25);
-  const r = await runSpecParsing(db, deps, { maxBatches, log, timeBudgetMs: minutes * 60_000 });
+  const settings = await loadSettings(db);
+  const categories = settings ? wantedCategories(settings) : undefined;
+  if (categories) log(`spec parsing limited to: ${categories.join(", ")}`);
+  const r = await runSpecParsing(db, deps, { maxBatches, log, timeBudgetMs: minutes * 60_000, categories });
   log(`spec parsing done: ${r.parsed} parsed, ${r.pending} still pending, ${r.failedBatches} failed batches${r.stoppedEarly ? " (stopped: AI limits)" : ""}`);
 }
 
 const summary = await runRanking(db, deps, log);
 log(`ranking done: ${JSON.stringify(summary)}`);
+
+// Price alerts (push notifications) — never fail the update because of them.
+await runAlerts(db, log).catch((err) => log(`alerts: error ${(err as Error).message}`));

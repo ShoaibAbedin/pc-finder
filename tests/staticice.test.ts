@@ -46,9 +46,13 @@ describe("queriesFromTargets", () => {
         storage: { prefer: ["2TB NVMe"] },
       },
     });
-    expect(q.map((x) => x.q)).toEqual(["rtx 5070", "rx 9070", "rtx 5070 ti", "ryzen 7 9700x", "32gb ddr5-6000", "2tb nvme"]);
+    // AI picks first, then popular parts fill up to 30 (no duplicates)
+    expect(q.slice(0, 6).map((x) => x.q)).toEqual(["rtx 5070", "rx 9070", "rtx 5070 ti", "ryzen 7 9700x", "32gb ddr5-6000", "2tb nvme"]);
+    expect(q.length).toBeLessThanOrEqual(30);
+    expect(q.length).toBeGreaterThan(20);
+    expect(new Set(q.map((x) => x.q)).size).toBe(q.length);
   });
   it("falls back to defaults without targets", () => {
-    expect(queriesFromTargets(null)).toBe(DEFAULT_QUERIES);
+    expect(queriesFromTargets(null)).toEqual(DEFAULT_QUERIES.slice(0, 30));
   });
 });

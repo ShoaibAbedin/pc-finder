@@ -133,7 +133,7 @@ export async function parseSpecsBatch(deps: AiDeps, batch: SpecInput[]) {
 const PAGE = 1000; // Supabase returns max 1000 rows per request
 
 /** Collects unique (category,title) pairs from live listings that have no cached specs yet. */
-async function pendingInputs(db: SupabaseClient, limit: number): Promise<SpecInput[]> {
+async function pendingInputs(db: SupabaseClient, limit: number, categories?: string[]): Promise<SpecInput[]> {
   const cached = new Set<string>();
   for (let from = 0; ; from += PAGE) {
     const { data, error } = await db.from("spec_cache").select("title_hash").range(from, from + PAGE - 1);
@@ -143,11 +143,12 @@ async function pendingInputs(db: SupabaseClient, limit: number): Promise<SpecInp
   }
 
   const pending = new Map<string, SpecInput>();
-  // Prioritise in-stock products, then OzBargain, then out-of-stock.
+  // Only what can matter to the user: in-stock items (then OzBargain) in categories they buy from.
+  // Out-of-stock items are parsed later only if they come back in stock.
+  const inCats = (q: any) => (categories?.length ? q.in("category", categories) : q);
   const sources: { table: string; filter: (q: any) => any }[] = [
-    { table: "products", filter: (q) => q.eq("status", "active") },
-    { table: "ozbargain_deals", filter: (q) => q.eq("status", "active").neq("category", "other") },
-    { table: "products", filter: (q) => q.eq("status", "out_of_stock") },
+    { table: "products", filter: (q) => inCats(q.eq("status", "active")) },
+    { table: "ozbargain_deals", filter: (q) => inCats(q.eq("status", "active").neq("category", "other")) },
   ];
   for (const s of sources) {
     for (let from = 0; pending.size < limit; from += PAGE) {
@@ -179,6 +180,8 @@ export async function runSpecParsing(
     /** Minimum gap between batches, to respect free-tier requests-per-minute (default 5 s). */
     minGapMs?: number;
     sleep?: (ms: number) => Promise<void>;
+    /** Only parse these categories (from the user's settings). */
+    categories?: string[];
   },
 ): Promise<{ parsed: number; pending: number; failedBatches: number; stoppedEarly: boolean }> {
   const log = opts.log ?? (() => {});
@@ -186,7 +189,7 @@ export async function runSpecParsing(
   const size = opts.batchSize ?? 25;
   const deadline = Date.now() + (opts.timeBudgetMs ?? 25 * 60_000);
   const minGap = opts.minGapMs ?? 5_000;
-  const inputs = await pendingInputs(db, opts.maxBatches * size);
+  const inputs = await pendingInputs(db, opts.maxBatches * size, opts.categories);
   log(`spec parsing: ${inputs.length} unique titles pending (this run's cap ${opts.maxBatches * size})`);
 
   let parsed = 0;

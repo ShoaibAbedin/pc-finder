@@ -17,6 +17,7 @@ const PATHS: { category: Category; paths: string[] }[] = [
   { category: "psu", paths: ["pc-parts/computer-parts/power-supply-psu-140"] },
   { category: "case", paths: ["pc-parts/computer-parts/cases-139"] },
   { category: "cooling", paths: ["pc-parts/computer-parts/cooling-191", "pc-parts/computer-parts/water-cooling-682"] },
+  { category: "prebuilt", paths: ["laptops-computers/desktop-computers/gaming-pcs-ready2go-466", "laptops-computers/desktop-computers/branded-gaming-pcs-729"] },
   { category: "monitor", paths: ["pc-parts/peripherals/monitors-142"] },
   { category: "peripheral", paths: ["pc-parts/peripherals/keyboards-40", "pc-parts/peripherals/mouse-mouse-pads-24", "pc-parts/peripherals/headphones-147"] },
   { category: "software", paths: ["pc-parts/software-services/operating-systems-573"] },

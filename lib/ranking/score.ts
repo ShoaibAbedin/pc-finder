@@ -26,6 +26,8 @@ export interface Candidate {
   is30dLow: boolean;
   priceDropped: boolean;
   isNew: boolean;
+  /** When the current price started (products only). */
+  currentPriceSince?: string | null;
   votes?: number;
   specs?: Specs;
   /** For prebuilts: total of cheapest matching in-stock parts (scraped prices). */

@@ -12,25 +12,43 @@ const BASE = "https://www.staticice.com.au";
 // matching dedupes them if their own scrapers work again).
 const SCRAPED_DIRECTLY = new Set(["mwave", "umart", "msy"]);
 
-/** Used when there are no AI build targets yet. */
+/**
+ * Popular current parts — searched every run (after the AI's recommended models) so stores we can't
+ * scrape directly (PC Case Gear, Scorptec, Centre Com, JB Hi-Fi) still show up for mainstream parts.
+ */
 export const DEFAULT_QUERIES: { category: Category; q: string }[] = [
   { category: "gpu", q: "rtx 5070" },
+  { category: "gpu", q: "rtx 5070 ti" },
   { category: "gpu", q: "rx 9070 xt" },
+  { category: "gpu", q: "rx 9070 16gb" },
   { category: "gpu", q: "rtx 5060 ti 16gb" },
-  { category: "cpu", q: "ryzen 7 9800x3d" },
+  { category: "gpu", q: "rx 9060 xt 16gb" },
+  { category: "gpu", q: "rtx 5060 8gb" },
+  { category: "gpu", q: "arc b580" },
+  { category: "cpu", q: "ryzen 5 7600" },
   { category: "cpu", q: "ryzen 5 9600x" },
+  { category: "cpu", q: "ryzen 7 9700x" },
+  { category: "cpu", q: "ryzen 7 7800x3d" },
+  { category: "cpu", q: "ryzen 7 9800x3d" },
+  { category: "cpu", q: "core ultra 5 245k" },
+  { category: "cpu", q: "i5 14400f" },
+  { category: "motherboard", q: "b650m wifi" },
   { category: "motherboard", q: "b850 motherboard" },
   { category: "ram", q: "32gb ddr5 6000" },
+  { category: "storage", q: "1tb nvme gen4" },
   { category: "storage", q: "2tb nvme gen4" },
+  { category: "psu", q: "750w gold" },
   { category: "psu", q: "850w gold" },
-  { category: "monitor", q: "27 1440p 180hz monitor" },
+  { category: "case", q: "atx mid tower case" },
+  { category: "cooling", q: "cpu air cooler" },
+  { category: "monitor", q: "27 1440p 165hz" },
 ];
 
-const MAX_QUERIES = 15;
+const MAX_QUERIES = 30; // ~30 requests at a polite pace ≈ 2 min per run
 
 /** Builds search terms from the AI targets' recommended models (falls back to defaults). */
 export function queriesFromTargets(targets: { targets: Record<string, { prefer: string[] }> } | null): { category: Category; q: string }[] {
-  if (!targets) return DEFAULT_QUERIES;
+  if (!targets) return DEFAULT_QUERIES.slice(0, MAX_QUERIES);
   const perCat: Record<string, number> = { gpu: 3, cpu: 3, motherboard: 2, monitor: 2, prebuilt: 0 };
   const out: { category: Category; q: string }[] = [];
   for (const [cat, t] of Object.entries(targets.targets)) {
@@ -39,9 +57,9 @@ export function queriesFromTargets(targets: { targets: Record<string, { prefer: 
     const good = (t.prefer ?? []).filter((p) => /\d/.test(p) && p.trim().length >= 6).slice(0, limit);
     for (const q of good) out.push({ category: cat as Category, q: q.toLowerCase() });
   }
+  // AI-recommended models first, then popular parts to fill the remaining slots.
   const seen = new Set<string>();
-  const uniq = out.filter((x) => !seen.has(x.q) && seen.add(x.q));
-  return (uniq.length >= 4 ? uniq : [...uniq, ...DEFAULT_QUERIES]).slice(0, MAX_QUERIES);
+  return [...out, ...DEFAULT_QUERIES].filter((x) => !seen.has(x.q) && seen.add(x.q)).slice(0, MAX_QUERIES);
 }
 
 function stockFrom(text: string): boolean | null {

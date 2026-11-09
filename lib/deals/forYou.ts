@@ -1,5 +1,6 @@
 import "server-only";
 import type { BuildResult } from "../build/assembler";
+import type { DealListing } from "./queries";
 import { createServiceClient } from "../db/client";
 
 export interface ForYouItem {
@@ -26,11 +27,26 @@ export interface ForYouItem {
   also?: { retailer: string; priceCents: number; url: string }[];
 }
 
-export async function getForYou(): Promise<{ items: ForYouItem[]; rankedAt: string | null; hasPrevious: boolean }> {
+export interface HomeData {
+  items: ForYouItem[];
+  rankedAt: string | null;
+  hasPrevious: boolean;
+  builds: BuildResult | null;
+  prevBestTotal: number | null;
+  /** Precomputed at the last update; null if that update predates precomputation. */
+  drops: DealListing[] | null;
+}
+
+/** Everything the home page needs, from the last two ranking runs (one small query + two item queries). */
+export async function getHomeData(): Promise<HomeData> {
   const db = createServiceClient();
-  const { data: runs, error } = await db.from("ranking_runs").select("id, created_at").order("id", { ascending: false }).limit(2);
+  const { data: runs, error } = await db
+    .from("ranking_runs")
+    .select("id, created_at, builds, drops")
+    .order("id", { ascending: false })
+    .limit(2);
   if (error) throw new Error(`ranking_runs: ${error.message}`);
-  if (!runs?.length) return { items: [], rankedAt: null, hasPrevious: false };
+  if (!runs?.length) return { items: [], rankedAt: null, hasPrevious: false, builds: null, prevBestTotal: null, drops: null };
 
   const [latest, previous] = runs;
   const [cur, prev] = await Promise.all([
@@ -53,16 +69,15 @@ export async function getForYou(): Promise<{ items: ForYouItem[]; rankedAt: stri
       ...(r.snapshot as Omit<ForYouItem, "key" | "rank" | "score" | "category" | "change">),
     };
   });
-  return { items, rankedAt: latest!.created_at, hasPrevious: !!previous };
-}
-
-/** Latest assembled builds + how the best build's total changed since the previous update. */
-export async function getBuilds(): Promise<{ result: BuildResult | null; prevBestTotal: number | null }> {
-  const db = createServiceClient();
-  const { data } = await db.from("ranking_runs").select("builds").not("builds", "is", null).order("id", { ascending: false }).limit(2);
-  const [latest, prev] = (data ?? []) as { builds: BuildResult }[];
-  const prevBest = prev?.builds?.builds?.find((b) => b.label === "best")?.totalCents ?? null;
-  return { result: latest?.builds ?? null, prevBestTotal: prevBest };
+  const prevBuilds = previous?.builds as BuildResult | null | undefined;
+  return {
+    items,
+    rankedAt: latest!.created_at,
+    hasPrevious: !!previous,
+    builds: (latest!.builds as BuildResult | null) ?? null,
+    prevBestTotal: prevBuilds?.builds?.find((b) => b.label === "best")?.totalCents ?? null,
+    drops: (latest!.drops as DealListing[] | null) ?? null,
+  };
 }
 
 export async function hasSettings(): Promise<boolean> {

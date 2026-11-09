@@ -29,7 +29,7 @@ export async function loadCandidates(db: SupabaseClient): Promise<Candidate[]> {
       db
         .from("deal_listings")
         .select(
-          "id,retailer_id,retailer_name,melbourne_pickup,title,url,category,image_url,current_price_cents,in_stock,status,prev_price_cents,drop_cents,drop_pct,high_30d_cents,history_points,is_30d_low,price_dropped,is_new",
+          "id,retailer_id,retailer_name,melbourne_pickup,title,url,category,image_url,current_price_cents,in_stock,status,prev_price_cents,drop_cents,drop_pct,high_30d_cents,history_points,is_30d_low,price_dropped,is_new,current_price_since",
         )
         .neq("status", "expired")
         .order("id")
@@ -72,6 +72,7 @@ export async function loadCandidates(db: SupabaseClient): Promise<Candidate[]> {
     historyPoints: l.history_points ?? 0,
     is30dLow: !!l.is_30d_low,
     priceDropped: !!l.price_dropped,
+    currentPriceSince: l.current_price_since ?? null,
     isNew: !!l.is_new,
     specs: specs.get(hashById.get(l.id) ?? ""),
   }));
@@ -108,6 +109,47 @@ export function rankAll(cands: Candidate[], s: Settings, t: Targets | null) {
   const budgets = categoryBudgets(s, t);
   const scored = cands.map((c) => scoreCandidate(c, s, t, budgets)).filter((x): x is Scored => x !== null);
   return { scored, forYou: selectForYou(scored), budgets };
+}
+
+/**
+ * Biggest real price drops (vs our history) in the last 30 days, in the shape the DealGrid expects.
+ * Computed once per update so the home page doesn't recompute history for every product on each view.
+ */
+export function topPriceDrops(cands: Candidate[], limit: number, now = Date.now()) {
+  const since = now - 30 * 86_400_000;
+  return cands
+    .filter(
+      (c) =>
+        c.source === "product" &&
+        c.status === "active" &&
+        c.category !== "other" &&
+        c.dropPct &&
+        c.currentPriceSince &&
+        new Date(c.currentPriceSince).getTime() >= since,
+    )
+    .sort((a, b) => b.dropPct! - a.dropPct!)
+    .slice(0, limit)
+    .map((c) => ({
+      id: Number(c.key.slice(2)),
+      retailer_id: c.retailerId ?? "",
+      retailer_name: c.retailerName ?? "",
+      melbourne_pickup: c.melbournePickup,
+      title: c.title,
+      url: c.url,
+      category: c.category,
+      image_url: c.imageUrl,
+      current_price_cents: c.priceCents,
+      in_stock: c.inStock,
+      status: c.status,
+      first_seen_at: "",
+      prev_price_cents: c.prevPriceCents,
+      current_price_since: c.currentPriceSince ?? null,
+      drop_cents: c.dropCents,
+      drop_pct: c.dropPct,
+      price_dropped: c.priceDropped,
+      is_new: c.isNew,
+      is_30d_low: c.is30dLow,
+    }));
 }
 
 export interface RankingSummary {
@@ -151,9 +193,11 @@ export async function runRanking(
     `builds: ${builds.builds.map((b) => `${b.label} $${Math.round(b.totalCents / 100)}`).join(", ") || "none"}${builds.notes.length ? ` (${builds.notes.join("; ")})` : ""}`,
   );
 
+  const drops = topPriceDrops(cands, 8);
+
   const { data: run, error } = await db
     .from("ranking_runs")
-    .insert({ settings_hash: settingsHash(s), item_count: scored.length, builds })
+    .insert({ settings_hash: settingsHash(s), item_count: scored.length, builds, drops })
     .select("id")
     .single();
   if (error) throw new Error(`ranking_runs: ${error.message}`);

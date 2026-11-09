@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import { AlertsPanel } from "@/components/AlertsPanel";
 import { SettingsForm } from "@/components/SettingsForm";
+import { loadAlertSettings } from "@/lib/alerts/run";
 import { UpdateLog } from "@/components/UpdateLog";
 import { createServiceClient } from "@/lib/db/client";
 import { loadTargets } from "@/lib/ai/targets";
@@ -13,7 +15,12 @@ export const maxDuration = 60; // saving re-runs the AI targets + ranking
 
 export default async function SettingsPage() {
   const db = createServiceClient();
-  const [settings, targets] = await Promise.all([loadSettings(db), loadTargets(db)]);
+  const [settings, targets, alerts, watches] = await Promise.all([
+    loadSettings(db),
+    loadTargets(db),
+    loadAlertSettings(db),
+    db.from("alert_watches").select("id, query, category, max_price_cents").eq("active", true).order("id"),
+  ]);
 
   return (
     <div className="max-w-2xl">
@@ -28,6 +35,21 @@ export default async function SettingsPage() {
       <div className="mt-12">
         <SettingsForm initial={settings ?? DEFAULT_SETTINGS} save={saveSettingsAction} />
       </div>
+      {alerts && (
+        <section id="alerts" className="mt-16 scroll-mt-44">
+          <h2 className="display mb-4 text-3xl">Price alerts</h2>
+          <AlertsPanel
+            topic={alerts.ntfy_topic}
+            options={{
+              notify_build: alerts.notify_build,
+              build_drop_dollars: Math.round(alerts.build_drop_cents / 100),
+              notify_top_picks: alerts.notify_top_picks,
+              top_pick_drop_pct: alerts.top_pick_drop_pct,
+            }}
+            watches={watches.data ?? []}
+          />
+        </section>
+      )}
       <section className="mt-16">
         <h2 className="display mb-4 text-3xl">Update log</h2>
         <UpdateLog />

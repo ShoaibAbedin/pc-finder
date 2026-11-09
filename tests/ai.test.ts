@@ -86,7 +86,7 @@ describe("chatJson provider fallback", () => {
 
   it("reads providers from env (Gemini first)", () => {
     const p = providersFromEnv({ GROQ_API_KEY: "q", GEMINI_API_KEY: "g" } as any);
-    expect(p.map((x) => `${x.name}:${x.model}`)).toEqual(["gemini:gemini-3.8-flash", "gemini:gemini-3.5-flash-lite", "groq:openai/gpt-oss-120b", "groq:openai/gpt-oss-20b"]);
+    expect(p.map((x) => `${x.name}:${x.model}`)).toEqual(["gemini:gemini-3.5-flash-lite", "gemini:gemini-3.8-flash", "groq:openai/gpt-oss-120b", "groq:openai/gpt-oss-20b"]);
     expect(providersFromEnv({} as any)).toEqual([]);
   });
 });

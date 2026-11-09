@@ -17,14 +17,14 @@ export interface Provider {
 export const AI_DEFAULTS = {
   geminiBaseUrl: "https://generativelanguage.googleapis.com/v1beta/openai",
   groqBaseUrl: "https://api.groq.com/openai/v1",
-  // Comma-separated: tried in order. Flash first, Flash-Lite when Flash is overloaded.
-  geminiModel: "gemini-3.8-flash,gemini-3.5-flash-lite",
+  // Comma-separated: tried in order. Flash-Lite first: faster, and 3.8 Flash's free daily quota runs out early.
+  geminiModel: "gemini-3.5-flash-lite,gemini-3.8-flash",
   // Separate per-model rate limits on Groq, so a second model adds free capacity.
   groqModel: "openai/gpt-oss-120b,openai/gpt-oss-20b",
   // Conservative daily request caps (below the free-tier limits) — adjust in .env if limits change.
   geminiDailyLimit: 200,
   groqDailyLimit: 800,
-  timeoutMs: 90_000,
+  timeoutMs: 40_000, // slow responses were wasting most of each run's AI time; fail fast and fall back
 };
 
 export function providersFromEnv(env: NodeJS.ProcessEnv = process.env): Provider[] {

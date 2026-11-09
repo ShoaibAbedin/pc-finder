@@ -7,16 +7,20 @@ import { Features } from "@/components/Features";
 import { ForYouList } from "@/components/ForYouList";
 import { EmptyState, Section } from "@/components/Section";
 import { BuildCard } from "@/components/BuildCard";
-import { getBuilds, getForYou, hasSettings } from "@/lib/deals/forYou";
+import { getHomeData, hasSettings } from "@/lib/deals/forYou";
 import { getPriceDrops } from "@/lib/deals/queries";
 import { timeAgo } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  if (!(await hasSettings())) redirect("/onboarding");
+  const [settingsSaved, home] = await Promise.all([hasSettings(), getHomeData()]);
+  if (!settingsSaved) redirect("/onboarding");
 
-  const [{ items, rankedAt }, drops, builds] = await Promise.all([getForYou(), getPriceDrops(8), getBuilds()]);
+  const { items, rankedAt } = home;
+  const builds = { result: home.builds, prevBestTotal: home.prevBestTotal };
+  // Precomputed at each update; only falls back to the slow live query for a run that predates it.
+  const drops = home.drops ?? (await getPriceDrops(8));
 
   return (
     <>

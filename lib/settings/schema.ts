@@ -102,6 +102,17 @@ export function settingsHash(s: Settings): string {
   return (h2 >>> 0).toString(16).padStart(8, "0") + (h1 >>> 0).toString(16).padStart(8, "0");
 }
 
+/** Categories the user actually shops in (used to focus AI parsing and alerts). */
+export function wantedCategories(s: Settings): string[] {
+  const out: string[] = [];
+  if (s.mode !== "prebuilt") out.push(...BUILD_CATEGORIES.filter((c) => !s.owned.categories.includes(c)));
+  if (s.mode !== "build") out.push("prebuilt");
+  if (s.extras.monitor) out.push("monitor");
+  if (s.extras.keyboard || s.extras.mouse || s.extras.headset) out.push("peripheral");
+  if (s.extras.windows) out.push("software");
+  return out;
+}
+
 /** Victoria postcodes 3000–3999 / 8000–8999 → Melbourne-area click & collect is relevant. */
 export function isVictoria(s: Settings): boolean {
   const pc = s.location.postcode;

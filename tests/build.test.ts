@@ -157,3 +157,26 @@ describe("assembler", () => {
     for (const b of r.builds) expect(b.totalCents).toBeLessThanOrEqual(b.limitCents);
   });
 });
+
+describe("tight budgets", () => {
+  it("still finds a build when the best-quality paths are all too expensive to finish", () => {
+    const s = settings({ budget: { total: 3000, perCategory: {} } as Settings["budget"] });
+    const budgets = { gpu: 90000, cpu: 45000, motherboard: 25000, ram: 20000, psu: 15000, case: 12000, storage: 15000, cooling: 8000 };
+    // many pricey, high-value CPUs/boards crowd the search; only the cheap ones leave room to finish
+    const cat = [
+      sc(cand("gpu", "Sapphire Radeon RX 9060 XT 16GB", 789), 70),
+      ...Array.from({ length: 30 }, (_, i) => sc(cand("cpu", `AMD Ryzen 7 9800X3D batch ${i}`, 700 + i), 90)),
+      sc(cand("cpu", "AMD Ryzen 5 7600 with Wraith Stealth", 299), 60),
+      ...Array.from({ length: 30 }, (_, i) => sc(cand("motherboard", `ASUS ROG X870E HERO ${i} ATX`, 600 + i), 90)),
+      sc(cand("motherboard", "MSI B650M GAMING PLUS WIFI Micro-ATX", 139), 60),
+      sc(cand("ram", "Corsair Vengeance 32GB DDR5 6000", 149), 70),
+      sc(cand("psu", "MSI MAG A750GL 750W Gold", 119), 70),
+      sc(cand("case", "Montech XR ATX Mid Tower Case", 55), 70),
+      sc(cand("storage", "PNY CS3040 1TB NVMe SSD", 97), 70),
+      sc(cand("cooling", "DeepCool AK400 CPU Air Cooler", 45), 70),
+    ];
+    const st = assemble(buildPools(cat, s, budgets), 165100, [])!;
+    expect(st).not.toBeNull();
+    expect(st.price).toBeLessThanOrEqual(165100);
+  });
+});

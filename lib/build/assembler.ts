@@ -30,6 +30,7 @@ const ORDER: BuildCategory[] = ["gpu", "cpu", "motherboard", "ram", "psu", "case
 // cooling weighs 0: a needed cooler is a cost, not an upgrade (otherwise builds with coolers look "better").
 const WEIGHT: Record<BuildCategory, number> = { gpu: 3, cpu: 2, motherboard: 1, ram: 1, psu: 0.7, case: 0.6, storage: 0.8, cooling: 0 };
 const BEAM = 80;
+const CHEAP_BEAM = 30;
 
 export interface BuildPart {
   category: BuildCategory | "monitor" | "peripheral" | "software" | "prebuilt";
@@ -83,12 +84,16 @@ export const partValue = (x: Scored) =>
 
 /**
  * Pool = best parts by build value (quality) ∪ best by For You score (which favours staying within the
- * category budget), so the search has both stronger and cheaper options to trade between.
+ * category budget) ∪ the cheapest decent options, so the search can always trade quality for price.
  */
 function topBy(xs: Scored[], n: number) {
   const byValue = [...xs].sort((a, b) => partValue(b) - partValue(a)).slice(0, n);
   const byScore = [...xs].sort((a, b) => b.score - a.score).slice(0, Math.ceil(n / 2));
-  return [...new Set([...byValue, ...byScore])];
+  const cheapest = [...xs]
+    .filter((x) => x.breakdown.fit >= 0.35)
+    .sort((a, b) => a.c.priceCents! - b.c.priceCents!)
+    .slice(0, 4);
+  return [...new Set([...byValue, ...byScore, ...cheapest])];
 }
 
 /** Candidate pools per category: in-stock products whose compatibility facts are known. */
@@ -184,8 +189,12 @@ export function assemble(
       }
     }
     if (!next.length) return null;
+    // Keep the highest-value partial builds AND the cheapest ones: with a tight budget, the best-so-far
+    // paths can all be too expensive to finish, while a cheaper path still fits.
     next.sort((a, b) => b.value - a.value || a.price - b.price);
-    beam = next.slice(0, BEAM);
+    const best = next.slice(0, BEAM);
+    const cheap = [...next].sort((a, b) => a.price - b.price || b.value - a.value).slice(0, CHEAP_BEAM);
+    beam = [...new Set([...best, ...cheap])];
   }
   return beam[0] ?? null;
 }

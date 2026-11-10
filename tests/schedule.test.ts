@@ -7,14 +7,14 @@ describe("shouldRunUpdate", () => {
   it("runs when there has never been an update", () => {
     expect(shouldRunUpdate({ lastSuccessStart: null, intervalHours: 10, now: at(0) }).run).toBe(true);
   });
-  it("waits until the interval (minus 2 h tolerance for the 4-hourly check) has passed", () => {
-    expect(shouldRunUpdate({ lastSuccessStart: at(0), intervalHours: 12, now: at(8) }).run).toBe(false);
-    expect(shouldRunUpdate({ lastSuccessStart: at(0), intervalHours: 12, now: at(10.5) }).run).toBe(true);
+  it("waits until the interval (minus 1 h tolerance for the 2-hourly check) has passed", () => {
+    expect(shouldRunUpdate({ lastSuccessStart: at(0), intervalHours: 10, now: at(8) }).run).toBe(false);
+    expect(shouldRunUpdate({ lastSuccessStart: at(0), intervalHours: 10, now: at(9.5) }).run).toBe(true);
   });
-  it("a 12 h interval doesn't drift to 16 h with 4-hourly checks", () => {
-    const last = at(5 / 60); // checks at 04:17, 08:17, 12:17 ... the 12:17 check must run
-    expect(shouldRunUpdate({ lastSuccessStart: last, intervalHours: 12, now: at(12 + 17 / 60) }).run).toBe(true);
-    expect(shouldRunUpdate({ lastSuccessStart: last, intervalHours: 12, now: at(8 + 17 / 60) }).run).toBe(false);
+  it("a 10 h interval doesn't drift to 12 h with 2-hourly checks", () => {
+    const last = at(5 / 60); // checks at 02:17, 04:17 ... 10:17 — the 10:17 check must run
+    expect(shouldRunUpdate({ lastSuccessStart: last, intervalHours: 10, now: at(10 + 17 / 60) }).run).toBe(true);
+    expect(shouldRunUpdate({ lastSuccessStart: last, intervalHours: 10, now: at(8 + 17 / 60) }).run).toBe(false);
   });
   it("supports faster intervals (Black Friday week)", () => {
     expect(shouldRunUpdate({ lastSuccessStart: at(0), intervalHours: 4, now: at(3.5) }).run).toBe(true);
@@ -24,9 +24,9 @@ describe("shouldRunUpdate", () => {
   });
   it("parses the interval safely", () => {
     expect(parseIntervalHours("4")).toBe(4);
-    expect(parseIntervalHours(undefined)).toBe(12);
-    expect(parseIntervalHours("0")).toBe(12);
-    expect(parseIntervalHours("abc")).toBe(12);
+    expect(parseIntervalHours(undefined)).toBe(10);
+    expect(parseIntervalHours("0")).toBe(10);
+    expect(parseIntervalHours("abc")).toBe(10);
   });
 });
 

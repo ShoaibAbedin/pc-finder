@@ -2,10 +2,10 @@ name: Update deals
 
 # GitHub wakes this up every 4 hours; scripts/should-run.ts decides if an update is actually due.
 # Change the interval without touching code: repo Settings → Secrets and variables → Actions → Variables →
-#   UPDATE_INTERVAL_HOURS (default 12) and BF_INTERVAL_HOURS (default 8, used automatically in Black Friday week).
+#   UPDATE_INTERVAL_HOURS (default 10) and BF_INTERVAL_HOURS (default 8, used automatically in Black Friday week).
 on:
   schedule:
-    - cron: "17 */4 * * *"
+    - cron: "17 */2 * * *"
   workflow_dispatch:
     inputs:
       force:
@@ -29,7 +29,7 @@ jobs:
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-      UPDATE_INTERVAL_HOURS: ${{ vars.UPDATE_INTERVAL_HOURS || '12' }}
+      UPDATE_INTERVAL_HOURS: ${{ vars.UPDATE_INTERVAL_HOURS || '10' }}
       BF_INTERVAL_HOURS: ${{ vars.BF_INTERVAL_HOURS || '8' }}
       AI_MINUTES_PER_RUN: ${{ vars.AI_MINUTES_PER_RUN || '12' }}
       AI_MAX_BATCHES_PER_RUN: ${{ vars.AI_MAX_BATCHES_PER_RUN || '200' }}

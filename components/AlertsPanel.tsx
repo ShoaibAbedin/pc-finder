@@ -139,7 +139,7 @@ export function AlertsPanel({ topic, options, watches }: Props) {
           {msg.message}
         </p>
       )}
-      <p className="text-xs text-muted">Alerts are checked after every update (every 12 h, every 8 h in Black Friday week). At most 6 per update.</p>
+      <p className="text-xs text-muted">Alerts are checked after every update (every 10 h, every 8 h in Black Friday week). At most 6 per update.</p>
     </div>
   );
 }

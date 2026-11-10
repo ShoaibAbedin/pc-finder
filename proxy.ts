@@ -4,7 +4,7 @@ import { AUTH_COOKIE, isAuthorised } from "./lib/auth";
 /** Locks the whole site behind the private unlock link. See lib/auth.ts. */
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
-  if (pathname === "/unlock" || pathname === "/locked") return NextResponse.next();
+  if (pathname === "/unlock" || pathname === "/locked" || pathname === "/login") return NextResponse.next();
 
   const siteKey = process.env.SITE_KEY;
   if (!siteKey) {

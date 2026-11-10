@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { AlertsPanel } from "@/components/AlertsPanel";
+import { PasswordForm } from "@/components/PasswordForm";
 import { SettingsForm } from "@/components/SettingsForm";
 import { loadAlertSettings } from "@/lib/alerts/run";
 import { UpdateLog } from "@/components/UpdateLog";
@@ -50,6 +51,10 @@ export default async function SettingsPage() {
           />
         </section>
       )}
+      <section className="mt-16">
+        <h2 className="display mb-4 text-3xl">Password</h2>
+        <PasswordForm />
+      </section>
       <section className="mt-16">
         <h2 className="display mb-4 text-3xl">Update log</h2>
         <UpdateLog />

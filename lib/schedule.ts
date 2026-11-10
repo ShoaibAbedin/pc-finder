@@ -4,8 +4,8 @@
  * GitHub's cron wakes us every 2 hours; `shouldRunUpdate` decides whether an update is due based on
  * UPDATE_INTERVAL_HOURS. A tolerance equal to half the check period stops a 10 h interval drifting to 12 h.
  */
-export const CHECK_PERIOD_HOURS = 4; // GitHub cron wakes every 4 h (each wake-up costs a billed minute)
-export const DEFAULT_INTERVAL_HOURS = 12;
+export const CHECK_PERIOD_HOURS = 2; // GitHub cron wakes every 2 h (public repo: Actions minutes are free)
+export const DEFAULT_INTERVAL_HOURS = 10;
 export const DEFAULT_BF_INTERVAL_HOURS = 8;
 
 /**
